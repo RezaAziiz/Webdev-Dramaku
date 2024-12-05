@@ -52,7 +52,7 @@ const CmsActors = () => {
 
   const fetchCountries = async () => {
     try {
-      const response = await fetch('http://localhost:3005/api/countries');
+      const response = await fetch('://localhost:3005/api/countries');
       const data = await response.json();
       setCountries(data);
     } catch (error) {

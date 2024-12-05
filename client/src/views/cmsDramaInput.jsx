@@ -35,7 +35,7 @@ const DramaInput = () => {
         console.log('Movie:', movie);
 
         try {
-            const response = await fetch('http://localhost:3005/api/movies', {
+            const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/movies', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -76,7 +76,7 @@ const DramaInput = () => {
 
     const fetchMovies = async () => {
         try {
-            const response = await fetch('http://localhost:3005/movies');
+            const response = await fetch('https://webdev-dramaku-production.up.railway.app/movies');
             const data = await response.json();
 
             if (data.length > 0) {
@@ -89,7 +89,7 @@ const DramaInput = () => {
 
     const fetchCountries = async () => {
         try {
-            const response = await fetch('http://localhost:3005/api/countries');
+            const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/countries');
             const data = await response.json();
             setCountries(data);
         } catch (error) {
@@ -100,7 +100,7 @@ const DramaInput = () => {
 
     const fetchAwards = async () => {
         try {
-            const response = await fetch('http://localhost:3005/api/awards');
+            const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/awards');
             const data = await response.json();
             setAwards(data);
         } catch (error) {

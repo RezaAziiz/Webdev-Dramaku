@@ -24,7 +24,7 @@ const MovieDetail = () => {
   useEffect(() => {
     const fetchGenres = async () => {
       try {
-        const response = await fetch('http://localhost:3005/api/genres');
+        const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/genres');
         const genres = await response.json();
 
         const colors = generateGenreColors(genres);
@@ -71,7 +71,7 @@ const MovieDetail = () => {
     const checkWatchlist = async () => {
       if (isLoggedIn && username) {
         try {
-          const response = await fetch(`http://localhost:3005/api/watchlist/${username}`);
+          const response = await fetch(`https://webdev-dramaku-production.up.railway.app/api/watchlist/${username}`);
           const watchlist = await response.json();
           setIsInWatchlist(watchlist.some(item => item.id === movie.id));
         } catch (error) {
@@ -88,7 +88,7 @@ const MovieDetail = () => {
   useEffect(() => {
     const fetchMovieDetails = async () => {
       try {
-        const response = await fetch(`http://localhost:3005/movies/${id}`);
+        const response = await fetch(`https://webdev-dramaku-production.up.railway.app/movies/${id}`);
         if (!response.ok) {
           throw new Error(`Error fetching movie details: ${response.statusText}`);
         }
@@ -120,7 +120,7 @@ const MovieDetail = () => {
 
     try {
       const response = await axios.post(
-        `http://localhost:3005/movies/${id}/comments`,
+        `https://webdev-dramaku-production.up.railway.app/movies/${id}/comments`,
         { commentText, rating },
         {
           headers: {
@@ -156,7 +156,7 @@ const MovieDetail = () => {
     }
   
     try {
-      const response = await fetch('http://localhost:3005/api/watchlist', {
+      const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/watchlist', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

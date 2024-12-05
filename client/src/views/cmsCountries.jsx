@@ -48,7 +48,7 @@ const Countries = () => {
     // Fetch countries from the server
     const fetchCountries = async () => {
         try {
-            const response = await fetch('http://localhost:3005/api/countries');
+            const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/countries');
             const data = await response.json();
             setCountries(data);
         } catch (error) {
@@ -76,7 +76,7 @@ const Countries = () => {
             }
 
             try {
-                const response = await fetch('http://localhost:3005/api/countries', {
+                const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/countries', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -103,7 +103,7 @@ const Countries = () => {
         const confirmDelete = window.confirm("Are you sure you want to delete this country?");
         if (confirmDelete) {
             try {
-                const response = await fetch(`http://localhost:3005/api/countries/${id}`, {
+                const response = await fetch(`https://webdev-dramaku-production.up.railway.app/api/countries/${id}`, {
                     method: 'DELETE',
                 });
 
@@ -123,7 +123,7 @@ const Countries = () => {
         if (!editedCountryName) return; // Do nothing if input is empty
 
         try {
-            const response = await fetch(`http://localhost:3005/api/countries/${id}`, {
+            const response = await fetch(`https://webdev-dramaku-production.up.railway.app/api/countries/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
