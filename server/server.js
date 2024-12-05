@@ -13,7 +13,14 @@ const cloudinary = require('cloudinary').v2; // Cloudinary SDK
 require('dotenv').config();
 console.log(process.env.PGUSER);
 // Setup CORS to allow frontend access
-app.use(cors());
+const corsOptions = {
+  origin: "*", // Mengizinkan semua domain
+  methods: ["GET", "POST", "PUT", "DELETE"], // Metode HTTP yang diizinkan
+  allowedHeaders: ["Content-Type", "Authorization"], // Header yang diizinkan
+};
+
+app.use(cors(corsOptions));
+
 app.use(express.json());
 
 // Cloudinary configuration
