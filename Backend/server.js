@@ -32,7 +32,7 @@ const upload = multer({ storage: multer.memoryStorage() }); // Using memory stor
 // PostgreSQL connection details
 const pool = new Pool({
   user: 'postgres',
-  host: 'localhost',
+  host: 'localhostt',
   database: 'Dramaku',
   password: 'newpassword',
   port: 5432,
