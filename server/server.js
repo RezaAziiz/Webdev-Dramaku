@@ -14,7 +14,7 @@ require('dotenv').config();
 console.log(process.env.PGUSER);
 // Setup CORS to allow frontend access
 const corsOptions = {
-  origin: "*", // Mengizinkan semua domain
+  origin: "https://webdev-dramaku.vercel.app/", // Mengizinkan semua domain
   methods: ["GET", "POST", "PUT", "DELETE"], // Metode HTTP yang diizinkan
   allowedHeaders: ["Content-Type", "Authorization"], // Header yang diizinkan
 };
