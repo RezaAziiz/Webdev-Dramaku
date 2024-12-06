@@ -16,7 +16,7 @@ console.log(process.env.PGUSER);
 app.use(express.json());
 
 const corsOptions = {
-  origin: "https://webdev-dramaku.vercel.app", // Tanpa trailing slash
+  origin: "https://webdev-dramaku-git-master-rezas-projects-788a66e1.vercel.app/", // Tanpa trailing slash
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
