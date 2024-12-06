@@ -52,7 +52,7 @@ const CmsActors = () => {
 
   const fetchCountries = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/countries');
+      const response = await fetch('https://webdev-dramaku-production.up.railway.app/countries');
       const data = await response.json();
       setCountries(data);
     } catch (error) {
