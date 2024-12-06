@@ -42,6 +42,9 @@ const pool = new Pool({
   port: process.env.DB_PORT || 5432, // Sesuaikan dengan DB_PORT di .env
 });
 
+pool.connect()
+  .then(() => console.log('Connected to the database'))
+  .catch(err => console.error('Database connection error', err.stack));
 const client = new OAuth2Client("193966095713-ooq3r03aaanmf67tudroa67ccctfqvk6.apps.googleusercontent.com");
 
 // Middleware untuk autentikasi token
