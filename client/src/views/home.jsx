@@ -60,16 +60,15 @@ const Home = () => {
           {/* Render MovieCard components */}
           {visibleMovies.map((movie) => (
             <CardMovie
-              key={movie.id}
-              poster={movie.images || 'https://via.placeholder.com/200x250?text=No+Image'}
+              poster={movie.images || 'https://via.placeholder.com/200x300?text=No+Image+Available'}
               title={movie.title}
               year={movie.year}
               genre={movie.genre}
               rating={movie.rating ? Number(movie.rating).toFixed(1) || '0.0' : 'N/A'}
-              onClick={() => navigate(`movies/${movie.id}`)}
+              onClick={() => navigate(`/movies/${movie.id}`)}
             />
           ))}
-        </div>  
+        </div>
       </div>
 
       {/* Show More Button */}

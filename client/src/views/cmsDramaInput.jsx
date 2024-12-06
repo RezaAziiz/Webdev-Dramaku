@@ -1,71 +1,112 @@
 import React, { useState, useEffect } from 'react';
 import Cms from '../components/cms';
-import { useNavigate, useLocation } from 'react-router-dom';
 
 const DramaInput = () => {
-    //   const [image, setImage] = useState(null);
-    const [setImage] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
     const [selectedActors, setSelectedActors] = useState([]);
-    const [newActorName, setNewActorName] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [suggestions, setSuggestions] = useState([]);
-    const [movies, setMovies] = useState([]);
+    const [actors, setActors] = useState([]);
+    const [genres, setGenres] = useState([]);
     const [countries, setCountries] = useState([]);
     const [awards, setAwards] = useState([]);
-    const navigate = useNavigate();
     const years = Array.from({ length: 40 }, (_, index) => 1985 + index);
+    const [selectedGenres, setSelectedGenres] = useState([]);
+    const [selectedAwards, setSelectedAwards] = useState([]);
     const [movie, setMovie] = useState({
         title: '',
         altTitle: '',
         year: '',
-        country: '',
+        country_id: '',
         availability: '',
         synopsis: '',
         genres: [],
         actors: [],
         trailer: '',
-        award: [],
+        awards: [],
+        image: null,
     });
 
+    const availablePlatforms = [
+        'Amazon Prime Video', 'Apple TV', 'Crunchyroll', 'Disney+',
+        'Google Play Movies', 'Netflix', 'Prime Video', 'YouTube'
+    ];
+
+    const handleAvailabilityChange = (platform) => {
+        setMovie((prevMovie) => {
+          const updatedAvailability = prevMovie.availability.split(',').map(item => item.trim());
+    
+          if (updatedAvailability.includes(platform)) {
+            updatedAvailability.splice(updatedAvailability.indexOf(platform), 1); // Remove the platform
+          } else {
+            updatedAvailability.push(platform); // Add the platform
+          }
+    
+          // Join the updated list of platforms into a single string without leading/trailing commas
+          const formattedAvailability = updatedAvailability.filter(Boolean).join(', ');
+    
+          return {
+            ...prevMovie,
+            availability: formattedAvailability  // Update the availability field without leading commas
+          };
+        });
+    };
 
     const handleSubmit = async (event) => {
         event.preventDefault();
 
-        console.log('Movie:', movie);
+        const formData = new FormData();
+        formData.append('title', movie.title);
+        formData.append('alt_title', movie.altTitle);
+        formData.append('year', movie.year);
+        formData.append('availability', movie.availability); // Send the comma-separated availability
+        formData.append('synopsis', movie.synopsis);
+        formData.append('trailer', movie.trailer);
+        formData.append('country_id', movie.country_id);
+
+        // Append selected genres as an array of genre IDs
+        selectedGenres.forEach((genreId) => {
+            formData.append('genres[]', genreId);
+        });
+
+        // Append selected awards as an array of award IDs
+        selectedAwards.forEach((awardId) => {
+            formData.append('awards[]', awardId);
+        });
+
+        // Append selected actors as an array of actor IDs
+        selectedActors.forEach((actor) => {
+            formData.append('actors[]', actor.id); // Assuming actor object has `id`
+        });
+
+        if (movie.photo) {
+            formData.append('photo', movie.photo); // Add image file
+        }
 
         try {
-            const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/movies', {
+            const response = await fetch('http://localhost:3005/api/movies', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    title: movie.title,
-                    alt_title: movie.altTitle,
-                    year: movie.year,
-                    // country_id: movie.country,
-                    availability: movie.availability,
-                    synopsis: movie.synopsis,
-                    trailer: movie.trailer,
-                }), 
+                body: formData,
             });
 
             if (response.ok) {
                 const data = await response.json();
                 console.log('Movie posted successfully:', data);
-                // empty form after submit
                 setMovie({
                     title: '',
                     altTitle: '',
-                    country: '',
+                    country_id: '',
                     availability: '',
                     synopsis: '',
                     trailer: '',
                     year: '',
-                  });
-                
-                  window.alert(`Drama ${movie.title} has been successfully created.`);
+                    photo: null,
+                });
+                setPreviewImage(null);
+                setSelectedGenres([]);
+                setSelectedAwards([]);
+                setSelectedActors([]);  // Reset selected actors
+                window.alert(`Drama ${movie.title} has been successfully created.`);
             } else {
                 console.error('Failed to post movie:', response.statusText);
             }
@@ -74,22 +115,21 @@ const DramaInput = () => {
         }
     };
 
-    const fetchMovies = async () => {
-        try {
-            const response = await fetch('https://webdev-dramaku-production.up.railway.app/movies');
-            const data = await response.json();
 
-            if (data.length > 0) {
-                setMovies(data); // Store all movies
-            }
+
+    const fetchGenres = async () => {
+        try {
+            const response = await fetch('http://localhost:3005/api/genres');
+            const data = await response.json();
+            setGenres(data);
         } catch (error) {
-            console.error('Error fetching movies:', error);
+            console.error('Error fetching genres:', error);
         }
     };
 
     const fetchCountries = async () => {
         try {
-            const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/countries');
+            const response = await fetch('http://localhost:3005/api/countries');
             const data = await response.json();
             setCountries(data);
         } catch (error) {
@@ -100,31 +140,54 @@ const DramaInput = () => {
 
     const fetchAwards = async () => {
         try {
-            const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/awards');
+            const response = await fetch('http://localhost:3005/api/awards');
             const data = await response.json();
-            setAwards(data);
+
+            // Sort data berdasarkan nama award (ascending)
+            const sortedAwards = data.sort((a, b) => {
+                if (a.name.toLowerCase() < b.name.toLowerCase()) {
+                    return -1;
+                }
+                if (a.name.toLowerCase() > b.name.toLowerCase()) {
+                    return 1;
+                }
+                return 0;
+            });
+
+            setAwards(sortedAwards); // Menyimpan data yang sudah di-sort
         } catch (error) {
             console.error('Error fetching awards:', error);
         }
     };
 
+    const fetchActors = async () => {
+        try {
+            const response = await fetch('http://localhost:3005/actors');
+            const data = await response.json();
+            setActors(data);
+        } catch (error) {
+            console.error('Error fetching actors:', error);
+        }
+    };
 
     const fetchSuggestions = async (input) => {
         if (input.length < 2) {
             setSuggestions([]);
             return;
         }
+
         input = input.toLowerCase();
 
-        const results = movies.filter((movie) => {
-            return movie.title.toLowerCase().startsWith(input);
+        const results = actors.filter((actor) => {
+            return actor.name.toLowerCase().startsWith(input);
         });
 
         setSuggestions(results);
     };
 
     useEffect(() => {
-        fetchMovies();
+        fetchActors();
+        fetchGenres();
         fetchCountries();
         fetchAwards();
         const debouncedFetchSuggestions = debounce(fetchSuggestions, 300);
@@ -140,79 +203,59 @@ const DramaInput = () => {
         };
     };
 
-
-
-    // Load the uploaded image for preview
     const handleImageUpload = (event) => {
         const file = event.target.files[0];
-        const reader = new FileReader();
-        reader.onload = () => {
-            setPreviewImage(reader.result);
-        };
-        reader.readAsDataURL(file);
-        setImage(file);
+        if (file) {
+            setMovie(prevMovie => ({
+                ...prevMovie,
+                photo: file, // Simpan file sebagai Blob untuk dikirim ke server
+            }));
+            setPreviewImage(URL.createObjectURL(file));
+        }
     };
+
 
     // Cancel image upload
     const cancelImageUpload = () => {
         setPreviewImage(null);
-        setImage(null);
+        setMovie(prevMovie => ({
+            ...prevMovie,
+            photo: null,
+        })
+        );
     };
 
-    // Add an actor to the selected list
-    //   const addActor = (actorName, actorImage) => {
-    //     setSelectedActors([...selectedActors, { name: actorName, image: actorImage }]);
-    //     setNewActorName('');
-    //   };
+    const handleActorClick = (actor) => {
+        if (selectedActors.length < 9) {
+            setSelectedActors([...selectedActors, actor]); // Add actor to selected list
+        }
+        setSearchTerm('');  // Clear the search field
+        setSuggestions([]); // Clear suggestions
+    };
 
-    // Remove an actor from the selected list
     const removeActor = (index) => {
         const updatedActors = [...selectedActors];
         updatedActors.splice(index, 1);
-        setSelectedActors(updatedActors);
+        setSelectedActors(updatedActors);  // Remove actor from selected list
     };
 
-    const normalizeAvailability = (availability) => {
-        switch (availability.toLowerCase()) {
-            case 'amazon':
-            case 'amazon prime':
-            case 'amazon prime video':
-            case 'amazon us':
-            case 'amazon video':
-                return 'Amazon Prime Video';
-            case 'apple tv':
-            case 'apple tv ':
-            case 'apple tv+':
-            case 'apple tv +':
-                return 'Apple TV';
-            case 'crunchyroll':
-            case 'cruncyroll':
-                return 'Crunchyroll';
-            case 'disney +':
-            case 'disney+':
-                return 'Disney+';
-            case 'google play film':
-            case 'google play movies':
-                return 'Google Play Movies';
-            case 'netflix':
-            case 'netiflix':
-                return 'Netflix';
-            case 'prime video':
-            case 'primevideo':
-                return 'Prime Video';
-            case 'youtube':
-            case 'youtube ani one':
-                return 'YouTube';
-            default:
-                return availability;
-        }
+
+    const handleGenreChange = (genre) => {
+        setSelectedGenres((prevSelectedGenres) =>
+            prevSelectedGenres.includes(genre)
+                ? prevSelectedGenres.filter((g) => g !== genre)
+                : [...prevSelectedGenres, genre]
+        );
     };
 
-    const handleActorClick = (suggestion) => {
-        setSearchTerm('');
-        setSuggestions([]);
-        navigate(`/actors/${suggestion.id}`);
+    const handleAwardChange = (award) => {
+        setSelectedAwards((prevSelectedAwards) =>
+            prevSelectedAwards.includes(award)
+                ? prevSelectedAwards.filter((a) => a !== award)
+                : [...prevSelectedAwards, award]
+        );
     };
+
 
     const handleOnChange = (event) => {
         const { name, value } = event.target;
@@ -240,6 +283,7 @@ const DramaInput = () => {
                                     <input
                                         type="file"
                                         id="upload-image"
+                                        name='image'
                                         className="hidden"
                                         accept="image/*"
                                         onChange={handleImageUpload}
@@ -306,27 +350,40 @@ const DramaInput = () => {
 
                             <select
                                 className="bg-gray-100 p-2 rounded-md w-full text-black col-span-2"
-                                value={movie.country}
-                                name='country'
+                                value={movie.country_id}
+                                name='country_id'
                                 onChange={handleOnChange}
                             >
                                 <option value="" disabled selected>
                                     Country
                                 </option>
                                 {countries.map((country) => (
-                                    <option key={country.id} value={country.name}>
+                                    <option key={country.id} value={country.id}>
                                         {country.name}
                                     </option>
                                 ))}
                             </select>
-                            <input
-                                type="text"
-                                name='availability'
-                                placeholder="Availability"
-                                className="bg-gray-100 p-2 rounded-md w-full text-black col-span-3"
-                                value={movie.availability}
-                                onChange={handleOnChange}
-                            />
+                        </div>
+
+                        {/* Availability */}
+                        <div className="col-span-4">
+                            <div className="p-4 border border-gray-100 rounded-xl">
+                                <h3 className="font-bold mb-2 text-center">Select Availability</h3>
+                                <div className="max-h-48 overflow-y-auto grid grid-cols-4 gap-4 p-2">
+                                    {availablePlatforms.map((platform) => (
+                                        <label key={platform} className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                value={platform}
+                                                checked={movie.availability.split(',').map(item => item.trim()).includes(platform)}
+                                                onChange={() => handleAvailabilityChange(platform)}
+                                                className="form-checkbox h-6 w-6"
+                                            />
+                                            <span>{platform}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
 
                         {/* Synopsis */}
@@ -347,59 +404,66 @@ const DramaInput = () => {
                             <div className="p-4 border border-gray-100 rounded-xl">
                                 <h3 className="font-bold mb-2 text-center">Select Genres</h3>
                                 <div className="max-h-48 overflow-y-auto grid grid-cols-4 gap-4 p-2">
-                                    {/* Genres with checkboxes */}
-                                    {['Adventure', 'Romance', 'Drama', 'Slice of Life', 'Action', 'Comedy', 'Fantasy', 'Science Fiction', 'Thriller', 'Horror', 'Mystery', 'Documentary', 'Historical', 'Musical', 'Western', 'Animation', 'Biography', 'Family', 'Sport', 'War', 'Superhero', 'Dystopian', 'Crime', 'Teen', 'Martial Arts', 'Parody', 'Kids', 'Fantasy', 'Adventure', 'Romantic Comedy', 'Action Comedy', 'Science Fantasy', 'Psychological', 'Noir', 'Disaster', 'Dance', 'Road', 'Satire', 'Experimental', 'Surreal', 'Gothic', 'Post-Apocalyptic', 'Vampire', 'Zombie', 'Martial Arts', 'Social', 'Cooking', 'Fitness', 'Romantic Drama'].map(
-                                        (genre) => (
-                                            <label key={genre} className="flex items-center space-x-2">
-                                                <input type="checkbox" className="form-checkbox h-6 w-6" />
-                                                <span>{genre}</span>
-                                            </label>
-                                        )
-                                    )}
+                                    {genres.map((genre) => (
+                                        <label key={genre.id} className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                value={genre.id} // Gunakan genre.id sebagai value
+                                                checked={selectedGenres.includes(genre.id)}
+                                                onChange={() => handleGenreChange(genre.id)}
+                                                className="form-checkbox h-6 w-6"
+                                            />
+                                            <span>{genre.name}</span>
+                                        </label>
+                                    ))}
                                 </div>
                             </div>
                         </div>
 
-
                         {/* Add Actors */}
-                        <div className="col-span-2">
-                            {/* Search Input */}
-                            <input
-                                type="text"
-                                placeholder="Search Actor Names"
-                                value={newActorName}
-                                onChange={(e) => setNewActorName(e.target.value)}
-                                className="bg-gray-100 p-2 rounded-md w-1/2 mb-1 text-black"
-                            />
+                        <div className="relative w-full col-span-4"> {/* Parent container is relative and full width */}
+                            {/* Search Input and Suggestions Wrapper */}
+                            <div className="relative w-full sm:w-1/4"> {/* Restricting width for smaller screens */}
+                                <input
+                                    type="text"
+                                    placeholder="Search Actor Names"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="bg-gray-100 p-2 rounded-md w-full mb-1 text-black"
+                                />
 
-                            {/* Suggestions Dropdown */}
-                            {suggestions.length > 0 && (
-                                <div
-                                    className="absolute top-full mt-2 w-96 bg-white border border-gray-300 rounded-lg shadow-lg z-20 max-h-60 overflow-y-auto"
-                                >
-                                    {/* Sort the suggestions by title in ascending order */}
-                                    {suggestions
-                                        .sort((a, b) => a.title.localeCompare(b.title))
-                                        .map((suggestion, index) => (
-                                            <div
-                                                key={index}
-                                                className="p-3 text-gray-900 cursor-pointer hover:bg-gray-100"
-                                                onClick={() => handleActorClick(suggestion)} // Pass the entire suggestion object
-                                            >
-                                                {suggestion.title}
-                                            </div>
-                                        ))}
-                                </div>
-                            )}
+                                {/* Suggestions Dropdown */}
+                                {suggestions.length > 0 && (
+                                    <div className="absolute left-0 top-full mt-2 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-20 max-h-60 overflow-y-auto">
+                                        {suggestions
+                                            .sort((a, b) => a.name.localeCompare(b.name))
+                                            .map((suggestion, index) => (
+                                                <div
+                                                    key={index}
+                                                    className="p-3 text-gray-900 cursor-pointer hover:bg-gray-100"
+                                                    onClick={() => handleActorClick(suggestion)}
+                                                >
+                                                    {suggestion.name}
+                                                </div>
+                                            ))}
+                                    </div>
+                                )}
+                            </div>
 
                             {/* Selected Actors Section */}
-                            <div className="grid-cols-3 sm:grid-cols-9 gap-4" id="selected-actors">
+                            <div className="flex flex-wrap gap-4 mt-4 w-full" id="selected-actors"> {/* Full width container */}
                                 {selectedActors.map((actor, index) => (
                                     <div key={index} className="flex flex-col items-center relative">
                                         <div className="w-20 h-24 bg-gray-200 rounded-lg overflow-hidden">
-                                            <img src={actor.image} alt={actor.name} className="w-full h-full object-cover" />
+                                            <img src={actor.url_photos} alt={actor.name} className="w-full h-full object-cover" />
                                         </div>
-                                        <p className="text-gray-300 text-sm text-center">{actor.name}</p>
+                                        <p className="text-gray-200 text-xs text-center max-w-[70px] break-words">
+                                            {actor.name.split(' ').map((word, i) => (
+                                                <span key={i}>
+                                                    {word} <br />
+                                                </span>
+                                            ))}
+                                        </p>
                                         <button
                                             className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm"
                                             onClick={() => removeActor(index)}
@@ -422,26 +486,31 @@ const DramaInput = () => {
                                 value={movie.trailer}
                                 onChange={handleOnChange}
                             />
-                            <select
-                                className="bg-gray-100 p-2 rounded-md w-full text-black z-10"
-                                value={movie.award}
-                                name='award'
-                                onChange={(e) => setMovie({ ...movie, award: e.target.value })}
-                            >
-                                <option value="" disabled selected>
-                                    Award
-                                </option>
-                                {awards.map((award) => (
-                                    <option key={award.id} value={`${award.name} (${award.year})`}>
-                                        {`${award.name} (${award.year})`}
-                                    </option>
-                                ))}
-                            </select>
+                        </div>
+
+                        <div className="col-span-4">
+                            <div className="p-4 border border-gray-100 rounded-xl">
+                                <h3 className="font-bold mb-2 text-center">Select Awards</h3>
+                                <div className="max-h-72 overflow-y-auto grid grid-cols-1 gap-3 p-2">
+                                    {awards.map((award) => (
+                                        <label key={award.id} className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                value={award.id} // Gunakan genre.id sebagai value
+                                                checked={selectedAwards.includes(award.id)}
+                                                onChange={() => handleAwardChange(award.id)}
+                                                className="form-checkbox h-6 w-6"
+                                            />
+                                            <span>{award.name} ({award.year})</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </form>
-        </Cms>
+        </Cms >
     );
 };
 

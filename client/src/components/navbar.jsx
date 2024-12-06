@@ -21,6 +21,7 @@ const Navbar = () => {
   const [awards, setAwards] = useState([]);
   const [availabilities, setAvailabilities] = useState([]);
   const years = Array.from({ length: 40 }, (_, index) => 1985 + index);
+  const [actors, setActors] = useState([]);
   const [filter, setFilter] = useState({
     genre: '',
     country: '',
@@ -29,6 +30,7 @@ const Navbar = () => {
     award: '',
     sort: '',
   });
+
 
 
   const handleFilterChange = (event) => {
@@ -234,7 +236,7 @@ const Navbar = () => {
 
   const fetchMovies = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production.up.railway.app/movies');
+      const response = await fetch('http://localhost:3005/movies');
       const data = await response.json();
 
       if (data.length > 0) {
@@ -245,24 +247,46 @@ const Navbar = () => {
     }
   };
 
+  const fetchActors = async () => {
+    try {
+      const response = await fetch('http://localhost:3005/actors');
+      const data = await response.json();
+      setActors(data);
+    } catch (error) {
+      console.error('Error fetching actors:', error);
+    }
+  };
+
   const fetchSuggestions = async (input) => {
     if (input.length < 2) {
-      setSuggestions([]);
+      setSuggestions([]); // Clear suggestions if input is too short
       return;
     }
 
     input = input.toLowerCase();
 
-    const results = movies.filter((movie) => {
-      return movie.title.toLowerCase().startsWith(input);
-    });
+    // First, try searching in the movies
+    const movieResults = movies.filter((movie) =>
+      movie.title.toLowerCase().startsWith(input)
+    );
 
-    setSuggestions(results);
+    // If no movies found, search in the actors
+    let results = movieResults;
+
+    // if (movieResults.length === 0) {
+    //     const actorResults = actors.filter((actor) => 
+    //         actor.name.toLowerCase().startsWith(input)
+    //     );
+    //     results = actorResults; // Update results with actors if no movies were found
+    // }
+
+    setSuggestions(results); // Set the final results
   };
+
 
   const fetchGenres = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/genres');
+      const response = await fetch('http://localhost:3005/api/genres');
       const data = await response.json();
       setGenres(data); // Menyimpan data genre ke state
     } catch (error) {
@@ -272,7 +296,7 @@ const Navbar = () => {
 
   const fetchCountries = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/countries');
+      const response = await fetch('http://localhost:3005/api/countries');
       const data = await response.json();
       setCountries(data);
     } catch (error) {
@@ -283,7 +307,7 @@ const Navbar = () => {
 
   const fetchAwards = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/awards');
+      const response = await fetch('http://localhost:3005/api/awards');
       const data = await response.json();
       setAwards(data);
     } catch (error) {
@@ -299,6 +323,7 @@ const Navbar = () => {
   }, [location.pathname]);
 
   useEffect(() => {
+    fetchActors();
     fetchMovies();
     fetchGenres();
     fetchCountries();
@@ -559,71 +584,71 @@ const Navbar = () => {
         </div>
       </div>
 
-        {/* Watchlist and Profile with Dropdown */}
-        <div className="flex items-center">
+      {/* Watchlist and Profile with Dropdown */}
+      <div className="flex items-center">
 
-          {/* <a
-            className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-2 rounded-full flex items-center mr-2"
+        <a
+          href={isAuthenticated ? `/watchlist/${username}` : "/login"}
+          className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-2 rounded-full flex items-center mr-2"
+        >
+          <i className="fas fa-bookmark mr-2"></i> Watchlist
+        </a>
+
+        {!isAuthenticated ? (
+          <a
+            href="/login"
+            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-full"
           >
-            <Link to={`/watchlist/${username}`}>
-              <i className="fas fa-bookmark mr-2"></i> Watchlist
-            </Link>
-          </a> */}
+            Login
+          </a>
+        ) : (
+          <div className="relative">
+            <div
+              id="profileButton"
+              onClick={toggleProfileDropdown}
+              className="bg-blue-300 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm cursor-pointer"
+            >
+              {username ? username.charAt(0).toUpperCase() : ''}
+            </div>
+            {isProfileDropdownVisible && (
+              <div
+                id="profileDropdown"
+                className="absolute right-0 mt-2 bg-gray-700 rounded-lg shadow-lg z-10"
+                style={{ top: '100%', right: '0' }}
+              >
+                {/* Conditionally render based on role */}
+                {userRole === 'Admin' && (
+                  <button
+                    onClick={() => handleNavigation('/dramaInput')}
+                    className="block w-full px-4 py-2 text-white hover:bg-gray-800 text-left"
+                  >
+                    CMSAdmin
+                  </button>
+                )}
 
-          
-<a
-  href={isAuthenticated ? `/watchlist/${username}` : "/login"}
-  className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-2 rounded-full flex items-center mr-2"
->
-  <i className="fas fa-bookmark mr-2"></i> Watchlist
-</a>
+                {userRole === 'Writer' && (
+                  <button
+                    onClick={() => handleNavigation('/dramaInput')}  // Adjust the route as needed
+                    className="block w-full px-4 py-2 text-white hover:bg-gray-800 text-left"
+                  >
+                    CMSWriter
+                  </button>
+                )}
 
-{!isAuthenticated ? (
-  <a
-    href="/login"
-    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-full"
-  >
-    Login
-  </a>
-) : (
-  <div className="relative">
-    <div
-      id="profileButton"
-      onClick={toggleProfileDropdown}
-      className="bg-blue-300 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm cursor-pointer"
-    >
-      {username ? username.charAt(0).toUpperCase() : ''}
-    </div>
-    {isProfileDropdownVisible && (
-      <div
-        id="profileDropdown"
-        className="absolute right-0 mt-2 bg-gray-700 rounded-lg shadow-lg z-10"
-        style={{ top: '100%', right: '0' }}
-      >
-        {/* Conditionally render based on role */}
-        {userRole === 'Admin' && (
-          <button
-            onClick={() => handleNavigation('/users')}
-            className="block w-full px-4 py-2 text-white hover:bg-gray-800 text-left"
-          >
-            CMSAdmin
-          </button>
+                {/* Logout option */}
+                <button
+                  onClick={handleLogout}
+                  className="block w-full px-4 py-2 text-white hover:bg-gray-800 text-left"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
-        {/* Logout option */}
-        <button
-          onClick={handleLogout}
-          className="block w-full px-4 py-2 text-white hover:bg-gray-800 text-left"
-        >
-          Logout
-        </button>
+
       </div>
-    )}
-  </div>
-)}
-
-
-        </div>
 
     </nav>
   );

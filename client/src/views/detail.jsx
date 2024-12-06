@@ -24,7 +24,7 @@ const MovieDetail = () => {
   useEffect(() => {
     const fetchGenres = async () => {
       try {
-        const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/genres');
+        const response = await fetch('http://localhost:3005/api/genres');
         const genres = await response.json();
 
         const colors = generateGenreColors(genres);
@@ -71,7 +71,7 @@ const MovieDetail = () => {
     const checkWatchlist = async () => {
       if (isLoggedIn && username) {
         try {
-          const response = await fetch(`https://webdev-dramaku-production.up.railway.app/api/watchlist/${username}`);
+          const response = await fetch(`http://localhost:3005/api/watchlist/${username}`);
           const watchlist = await response.json();
           setIsInWatchlist(watchlist.some(item => item.id === movie.id));
         } catch (error) {
@@ -79,16 +79,16 @@ const MovieDetail = () => {
         }
       }
     };
-  
+
     if (movie) {
       checkWatchlist();
     }
-  }, [movie, isLoggedIn, username]);
+  }, [movie, isLoggedIn, username]);
 
   useEffect(() => {
     const fetchMovieDetails = async () => {
       try {
-        const response = await fetch(`https://webdev-dramaku-production.up.railway.app/movies/${id}`);
+        const response = await fetch(`http://localhost:3005/movies/${id}`);
         if (!response.ok) {
           throw new Error(`Error fetching movie details: ${response.statusText}`);
         }
@@ -115,23 +115,31 @@ const MovieDetail = () => {
   const handleCommentSubmit = async () => {
     if (!commentText.trim() || rating === 0) {
       alert("Please provide a comment and a rating.");
-      return; // Tidak lanjutkan jika komentar atau rating tidak valid
+      return; // Don't proceed if comment or rating is invalid
     }
-
+  
+    // Log the values that will be sent to the backend
+    console.log("Comment Text:", commentText);
+    console.log("Rating:", rating);
+  
     try {
       const response = await axios.post(
-        `https://webdev-dramaku-production.up.railway.app/movies/${id}/comments`,
+        `http://localhost:3005/movies/${id}/comments`,
         { commentText, rating },
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`, // Ambil token dari localStorage
+            Authorization: `Bearer ${localStorage.getItem('token')}`, // Get token from localStorage
           },
         }
       );
-      console.log(response.data); // Tampilkan pesan sukses
+  
+      // You can log the response after it's successfully posted
+      console.log("Response from backend:", response.data);
+  
+      // Update the movie state with the new comment
       setCommentText(''); // Clear input after submit
       setRating(0); // Reset rating
-      setIsCommentFormVisible(false); // Sembunyikan form setelah submit
+      setIsCommentFormVisible(false); // Hide the form after submit
       setMovie(prevMovie => ({
         ...prevMovie,
         comments: [
@@ -141,29 +149,30 @@ const MovieDetail = () => {
       }));
     } catch (error) {
       console.error("Error adding comment:", error);
-      alert("Failed to add comment."); // Tampilkan alert jika gagal
+      alert("Failed to add comment."); // Show alert if failed
     }
   };
+  
 
   const handleAddToWatchlist = async (movieId) => {
     if (!isLoggedIn) {
       return navigate('/login');
     }
-  
+
     if (!username) {
       alert('Username is not defined.');
       return;
     }
-  
+
     try {
-      const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/watchlist', {
+      const response = await fetch('http://localhost:3005/api/watchlist', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ username: username, movieId: movieId }),
       });
-  
+
       if (response.ok) {
         setIsInWatchlist(true); // Update the state after adding to watchlist
         alert('Movie added to your watchlist.');
@@ -177,10 +186,11 @@ const MovieDetail = () => {
   };
 
 
-
   const filteredComments = filterRating
     ? movie.comments.filter(comment => comment.rating === filterRating)
     : movie.comments;
+
+  // const showComments = movie.comments.filter(comment => comment.status);
 
   return (
     <div>
@@ -188,18 +198,18 @@ const MovieDetail = () => {
         {movie ? (
           <div className="flex flex-col md:flex-row gap-8">
             <div className="flex-none w-full md:w-1/5">
-            <img
+              <img
                 src={movie.images || 'https://via.placeholder.com/200x300?text=No+Image+Available'}
                 alt={`${movie.title || 'Movie'} Poster`}
                 className="w-full h-72 rounded shadow-lg mb-4"
-            />
-            <button
-            onClick={() => handleAddToWatchlist(movie.id)}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded shadow"
-          >
-            {isInWatchlist ? 'In Your Watchlist' : '+ Add to My Watchlist'}
-          </button>
-        </div>
+              />
+              <button
+                onClick={() => handleAddToWatchlist(movie.id)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded shadow"
+              >
+                {isInWatchlist ? 'In Your Watchlist' : '+ Add to My Watchlist'}
+              </button>
+            </div>
             <div className="flex-grow">
               <h1 className="text-3xl text-gray-200 font-bold mb-2">{movie.title || 'Title Not Available'}</h1>
               <p className="text-sm text-gray-200 mb-2">
@@ -229,23 +239,22 @@ const MovieDetail = () => {
 
               {/* Genres */}
               <div className="flex flex-wrap gap-2 mb-3">
-              {movie.genres && Array.isArray(movie.genres) && movie.genres.length > 0 ? (
-                movie.genres.map((genre, index) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 rounded-full text-sm font-medium text-black"
-                    style={{
-                      backgroundColor: genreColors[genre.trim().toLowerCase()] || '#9ca3af',
-                    }}
-                  >
-                    {genre.trim()}
-                  </span>
-                ))
-              ) : (
-                <span className="text-sm text-gray-200">No genres available</span>
-              )}
+                {movie.genres ? (
+                  movie.genres.split(',').map((genre, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 rounded-full text-sm font-medium text-black"
+                      style={{
+                        backgroundColor: genreColors[genre.trim().toLowerCase()] || '#9ca3af',
+                      }}
+                    >
+                      {genre.trim()}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-sm text-gray-200">No genres available</span>
+                )}
               </div>
-
 
               <div className="flex items-center mb-2">
                 <svg className="w-5 h-5 text-yellow-400 mr-1" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
@@ -283,15 +292,15 @@ const MovieDetail = () => {
                       }}
                     />
                     <p className="text-gray-200 whitespace-normal break-words text-center max-w-[70px] text-xs">
-                    {actor.name && typeof actor.name === 'string' && actor.name.split(' ').length > 3
-                      ? actor.name.split(' ').map((word, i) => (
+                      {actor.name && typeof actor.name === 'string' && actor.name.split(' ').length > 3
+                        ? actor.name.split(' ').map((word, i) => (
                           <span key={i}>
                             {word}
                             <br />
                           </span>
                         ))
-                      : actor.name || "No name available"}
-                  </p>
+                        : actor.name || "No name available"}
+                    </p>
                   </div>
                 ))
             ) : (
@@ -401,3 +410,4 @@ const MovieDetail = () => {
 };
 
 export default MovieDetail;
+

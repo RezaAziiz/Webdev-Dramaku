@@ -28,7 +28,7 @@ const Genres = () => {
 
     const fetchGenres = async () => {
         try {
-            const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/genres');
+            const response = await fetch('http://localhost:3005/api/genres');
             const data = await response.json();
             setGenres(data);
         } catch (error) {
@@ -72,7 +72,7 @@ const Genres = () => {
             }
 
             try {
-                const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/genres', {
+                const response = await fetch('http://localhost:3005/api/genres', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -98,7 +98,7 @@ const Genres = () => {
         const confirmDelete = window.confirm("Are you sure you want to delete this genre?");
         if (confirmDelete) {
             try {
-                const response = await fetch(`https://webdev-dramaku-production.up.railway.app/api/genres/${id}`, {
+                const response = await fetch(`http://localhost:3005/api/genres/${id}`, {
                     method: 'DELETE',
                 });
 
@@ -118,7 +118,7 @@ const Genres = () => {
         if (!editedGenreName) return;
 
         try {
-            const response = await fetch(`https://webdev-dramaku-production.up.railway.app/api/genres/${id}`, {
+            const response = await fetch(`http://localhost:3005/api/genres/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

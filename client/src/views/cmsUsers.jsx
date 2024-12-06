@@ -42,7 +42,7 @@ const Users = () => {
     useEffect(() => {
         const fetchUsers = async () => {
             try {
-                const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/users'); // Fetch only non-deleted users
+                const response = await fetch('http://localhost:3005/api/users'); // Fetch only non-deleted users
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
@@ -60,7 +60,7 @@ const Users = () => {
         console.log(`Attempting to change role of user: ${username}`); // Log when the function is called
         if (window.confirm(`Are you sure you want to change the role of ${username} to Admin?`)) {
             try {
-              const response = await fetch(`https://webdev-dramaku-production.up.railway.app/api/users/${username}/role`, {
+              const response = await fetch(`http://localhost:3005/api/users/${username}/role`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -88,7 +88,7 @@ const Users = () => {
       if (window.confirm(`Are you sure you want to ban ${username}?`)) {
           console.log(`User ${username} confirmed to be banned.`); // Log confirmation
           try {
-              const response = await fetch(`https://webdev-dramaku-production.up.railway.app/api/users/${username}/ban`, {
+              const response = await fetch(`http://localhost:3005/api/users/${username}/ban`, {
                   method: 'PUT',
                   headers: {
                       'Content-Type': 'application/json',

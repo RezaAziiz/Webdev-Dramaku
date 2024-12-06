@@ -5,29 +5,21 @@ const multer = require('multer');
 const path = require('path');
 const app = express();
 const port = 3005;
-const bcrypt = require("bcryptjs");
+const bcrypt = require('bcryptjs');
 const jwt = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
 const fs = require('fs');
 const cloudinary = require('cloudinary').v2; // Cloudinary SDK
-require('dotenv').config();
-console.log(process.env.PGUSER);
+
 // Setup CORS to allow frontend access
+app.use(cors());
 app.use(express.json());
-
-const corsOptions = {
-  origin: "https://webdev-dramaku-git-master-rezas-projects-788a66e1.vercel.app", // Tanpa trailing slash
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-};
-
-app.use(cors(corsOptions)); // Pastikan ini dipasang di awal middleware
 
 // Cloudinary configuration
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: 'dtk2yqead',
+  api_key: '417426998347937',
+  api_secret: 'nhiBmTCI347fdl2BLyHrW7moYTE',
 });
 
 
@@ -35,16 +27,13 @@ const upload = multer({ storage: multer.memoryStorage() }); // Using memory stor
 
 // PostgreSQL connection details
 const pool = new Pool({
-  user: process.env.POSTGRES_USER, // Sesuaikan dengan variabel POSTGRES_USER di .env
-  host: process.env.DB_HOST, // Sesuaikan dengan DB_HOST di .env
-  database: process.env.POSTGRES_DB, // Sesuaikan dengan POSTGRES_DB di .env
-  password: process.env.POSTGRES_PASSWORD, // Sesuaikan dengan POSTGRES_PASSWORD di .env
-  port: process.env.DB_PORT || 5432, // Sesuaikan dengan DB_PORT di .env
+  user: 'postgres',
+  host: 'localhost',
+  database: 'postgres',
+  password: 'Aziiz_4321',
+  port: 5432,
 });
 
-pool.connect()
-  .then(() => console.log('Connected to the database'))
-  .catch(err => console.error('Database connection error', err.stack));
 const client = new OAuth2Client("193966095713-ooq3r03aaanmf67tudroa67ccctfqvk6.apps.googleusercontent.com");
 
 // Middleware untuk autentikasi token
@@ -232,7 +221,7 @@ app.get('/movies/:id', async (req, res) => {
             WHERE c.movie_id = m.id AND c.status = '1') as rating,
           (SELECT json_agg(json_build_object('user', c.username, 'text', c.comment, 'rating', c.rate, 'date', c.created_at)) 
             FROM comments c 
-            WHERE c.movie_id = m.id AND c.status = '1') as comments,
+            WHERE c.movie_id = m.id AND c.status = 'true') as comments,
             (SELECT json_agg(json_build_object('name', a.name, 'url_photos', a.url_photos)) 
              FROM movie_actor ma
              JOIN actors a ON a.id = ma.actor_id 
@@ -293,7 +282,7 @@ app.get('/api/search', async (req, res) => {
         (SELECT string_agg(g.name, ', ') 
          FROM movie_genre mg
          JOIN genres g ON g.id = mg.genre_id
-         WHERE mg.movie_id = m.id) AS genre,
+        //  WHERE mg.movie_id = m.id) AS genre,
         (SELECT AVG(c.rate)
          FROM comments c 
          WHERE c.movie_id = m.id AND c.status = '1') AS rating,
@@ -372,36 +361,46 @@ app.get('/api/genres', async (req, res) => {
 // Endpoint untuk menambahkan komentar
 app.post('/movies/:id/comments', authenticateToken, async (req, res) => {
   const movieId = parseInt(req.params.id);
-  const { commentText, rating, status } = req.body; // Ambil status dari request body
+  const { commentText, rating, status } = req.body; // Ambil data dari request body
   const userName = req.user.username; // Ambil username dari token yang terautentikasi
+
+  // Log the received data to the terminal
+  console.log("Received comment data:", {
+    movieId,
+    userName,
+    commentText,
+    rating,
+    status
+  });
 
   if (!commentText || !rating) {
     return res.status(400).json({ message: "Comment text and rating are required." });
   }
 
   try {
-    // Insert komentar ke database
+    // Insert comment into the database with the current timestamp
     await pool.query(
-      "INSERT INTO comments (movie_id, username, comment, rate, status) VALUES ($1, $2, $3, $4, $5)", // Ubah query untuk menggunakan $5 untuk status
-      [movieId, userName, commentText, rating, status] // Tambahkan status di akhir array
+      "INSERT INTO comments (movie_id, username, comment, rate, status, created_at) VALUES ($1, $2, $3, $4, false, CURRENT_TIMESTAMP)",
+      [movieId, userName, commentText, rating, false]
     );
-
+  
     res.status(201).json({ message: "Comment added successfully." });
   } catch (error) {
     console.error("Error adding comment:", error);
     res.status(500).json({ message: "Server error while adding comment." });
-  }
+  }  
 });
+
 
 
 // Route to get all countries in descending order by id
 app.get('/api/countries', async (req, res) => {
   try {
-      const result = await pool.query('SELECT * FROM countries ORDER BY id DESC');
-      res.json(result.rows);
+    const result = await pool.query('SELECT * FROM countries ORDER BY id DESC');
+    res.json(result.rows);
   } catch (error) {
-      console.error('Error fetching countries:', error);
-      res.status(500).json({ error: 'Failed to fetch countries' });
+    console.error('Error fetching countries:', error);
+    res.status(500).json({ error: 'Failed to fetch countries' });
   }
 });
 
@@ -409,11 +408,11 @@ app.get('/api/countries', async (req, res) => {
 app.post('/api/countries', async (req, res) => {
   const { name } = req.body;
   try {
-      const result = await pool.query('INSERT INTO countries (name) VALUES ($1) RETURNING *', [name]);
-      res.status(201).json(result.rows[0]); // Return the newly created country
+    const result = await pool.query('INSERT INTO countries (name) VALUES ($1) RETURNING *', [name]);
+    res.status(201).json(result.rows[0]); // Return the newly created country
   } catch (error) {
-      console.error('Error adding country:', error);
-      res.status(500).json({ error: 'Failed to add country' });
+    console.error('Error adding country:', error);
+    res.status(500).json({ error: 'Failed to add country' });
   }
 });
 
@@ -421,20 +420,20 @@ app.delete('/api/countries/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
-      await pool.query('UPDATE actors SET country_id = NULL WHERE country_id = $1', [id]);
-      await pool.query('UPDATE movies SET country_id = NULL WHERE country_id = $1', [id]);
-      await pool.query('UPDATE awards SET country_id = NULL WHERE country_id = $1', [id]);
+    await pool.query('UPDATE actors SET country_id = NULL WHERE country_id = $1', [id]);
+    await pool.query('UPDATE movies SET country_id = NULL WHERE country_id = $1', [id]);
+    await pool.query('UPDATE awards SET country_id = NULL WHERE country_id = $1', [id]);
 
-      const result = await pool.query('DELETE FROM countries WHERE id = $1 RETURNING *', [id]);
-      
-      if (result.rowCount > 0) {
-          res.status(200).json({ message: 'Country deleted successfully' });
-      } else {
-          res.status(404).json({ message: 'Country not found' });
-      }
+    const result = await pool.query('DELETE FROM countries WHERE id = $1 RETURNING *', [id]);
+
+    if (result.rowCount > 0) {
+      res.status(200).json({ message: 'Country deleted successfully' });
+    } else {
+      res.status(404).json({ message: 'Country not found' });
+    }
   } catch (error) {
-      console.error('Error deleting country:', error);
-      res.status(500).json({ message: 'Internal server error' });
+    console.error('Error deleting country:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -445,16 +444,16 @@ app.put('/api/countries/:id', async (req, res) => {
   const { name } = req.body; // New country name
 
   try {
-      const result = await pool.query('UPDATE countries SET name = $1 WHERE id = $2 RETURNING *', [name, id]);
-      
-      if (result.rowCount > 0) {
-          res.status(200).json(result.rows[0]); // Return the updated country
-      } else {
-          res.status(404).json({ message: 'Country not found' });
-      }
+    const result = await pool.query('UPDATE countries SET name = $1 WHERE id = $2 RETURNING *', [name, id]);
+
+    if (result.rowCount > 0) {
+      res.status(200).json(result.rows[0]); // Return the updated country
+    } else {
+      res.status(404).json({ message: 'Country not found' });
+    }
   } catch (error) {
-      console.error('Error updating country:', error);
-      res.status(500).json({ message: 'Internal server error' });
+    console.error('Error updating country:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -462,11 +461,11 @@ app.put('/api/countries/:id', async (req, res) => {
 app.post('/api/genres', async (req, res) => {
   const { name } = req.body;
   try {
-      const result = await pool.query('INSERT INTO genres (name) VALUES ($1) RETURNING *', [name]);
-      res.status(201).json(result.rows[0]);
+    const result = await pool.query('INSERT INTO genres (name) VALUES ($1) RETURNING *', [name]);
+    res.status(201).json(result.rows[0]);
   } catch (error) {
-      console.error('Error adding genre:', error);
-      res.status(500).json({ message: 'Internal server error' });
+    console.error('Error adding genre:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -475,15 +474,15 @@ app.put('/api/genres/:id', async (req, res) => {
   const { id } = req.params;
   const { name } = req.body;
   try {
-      const result = await pool.query('UPDATE genres SET name = $1 WHERE id = $2 RETURNING *', [name, id]);
-      if (result.rowCount > 0) {
-          res.status(200).json(result.rows[0]);
-      } else {
-          res.status(404).json({ message: 'Genre not found' });
-      }
+    const result = await pool.query('UPDATE genres SET name = $1 WHERE id = $2 RETURNING *', [name, id]);
+    if (result.rowCount > 0) {
+      res.status(200).json(result.rows[0]);
+    } else {
+      res.status(404).json({ message: 'Genre not found' });
+    }
   } catch (error) {
-      console.error('Error updating genre:', error);
-      res.status(500).json({ message: 'Internal server error' });
+    console.error('Error updating genre:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -492,29 +491,29 @@ app.delete('/api/genres/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
-      await pool.query('DELETE FROM movie_genre WHERE genre_id = $1', [id]);
-      
-      const result = await pool.query('DELETE FROM genres WHERE id = $1 RETURNING *', [id]);
-      
-      if (result.rowCount > 0) {
-          res.status(200).json({ message: 'Genre and related movie associations deleted successfully' });
-      } else {
-          res.status(404).json({ message: 'Genre not found' });
-      }
+    await pool.query('DELETE FROM movie_genre WHERE genre_id = $1', [id]);
+
+    const result = await pool.query('DELETE FROM genres WHERE id = $1 RETURNING *', [id]);
+
+    if (result.rowCount > 0) {
+      res.status(200).json({ message: 'Genre and related movie associations deleted successfully' });
+    } else {
+      res.status(404).json({ message: 'Genre not found' });
+    }
   } catch (error) {
-      console.error('Error deleting Genre:', error);
-      res.status(500).json({ message: 'Internal server error' });
+    console.error('Error deleting Genre:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
 // Get all users
 app.get('/api/users', async (req, res) => {
   try {
-      const result = await pool.query('SELECT * FROM users WHERE banned = false ORDER BY username ASC');
-      res.json(result.rows);
+    const result = await pool.query('SELECT * FROM users WHERE banned = false ORDER BY username ASC');
+    res.json(result.rows);
   } catch (error) {
-      console.error('Error fetching countries:', error);
-      res.status(500).json({ error: 'Failed to fetch users' });
+    console.error('Error fetching countries:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
   }
 });
 
@@ -522,15 +521,15 @@ app.get('/api/users', async (req, res) => {
 app.put('/api/users/:username/ban', async (req, res) => {
   const { username } = req.params;
   try {
-      const result = await pool.query('UPDATE users SET banned = true WHERE username = $1 RETURNING *', [username]);
-      if (result.rowCount > 0) {
-          res.status(200).json({ message: 'User banned successfully' });
-      } else {
-          res.status(404).json({ message: 'User not found' });
-      }
+    const result = await pool.query('UPDATE users SET banned = true WHERE username = $1 RETURNING *', [username]);
+    if (result.rowCount > 0) {
+      res.status(200).json({ message: 'User banned successfully' });
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
   } catch (error) {
-      console.error('Error banning user:', error);
-      res.status(500).json({ message: 'Internal server error' });
+    console.error('Error banning user:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -539,15 +538,15 @@ app.put('/api/users/:username/role', async (req, res) => {
   const { username } = req.params;
   const { role } = req.body;
   try {
-      const result = await pool.query('UPDATE users SET role_id = $1 WHERE username = $2 RETURNING *', [role, username]);
-      if (result.rowCount > 0) {
-          res.status(200).json({ message: 'User role updated successfully' });
-      } else {  
-          res.status(404).json({ message: 'User not found' });
-      }
+    const result = await pool.query('UPDATE users SET role_id = $1 WHERE username = $2 RETURNING *', [role, username]);
+    if (result.rowCount > 0) {
+      res.status(200).json({ message: 'User role updated successfully' });
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
   } catch (error) {
-      console.error('Error updating user role:', error);
-      res.status(500).json({ message: 'Internal server error' });
+    console.error('Error updating user role:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -686,7 +685,7 @@ app.post('/actors', upload.single('photo'), async (req, res) => {
       [country_id, name, birth_date, url_photos]
     );
 
-    return res.json({ success: true, actor: result.rows[0] });
+    return res.status(201).json({ success: true, actor: result.rows[0] });
   } catch (error) {
     console.error('Error inserting actor:', error);
     res.status(500).json({ error: 'Server Error' });
@@ -694,32 +693,42 @@ app.post('/actors', upload.single('photo'), async (req, res) => {
 });
 
 
-// Endpoint to update an actor
+// Endpoint untuk update actor dengan dukungan foto
 app.put('/actors/:id', upload.single('photo'), async (req, res) => {
   const { id } = req.params;
   const { country_id, name, birth_date } = req.body;
   let url_photos = null;
 
+  console.log('Updating actor with ID:', id);
+  console.log('Updated actor data:', { country_id, name, birth_date, url_photos });
+
   try {
+    // Jika ada file foto baru, upload ke Cloudinary
     if (req.file) {
-      // Upload to Cloudinary if a new photo is provided
       const cloudinaryResult = await new Promise((resolve, reject) => {
         cloudinary.uploader.upload_stream((error, result) => {
           if (error) {
             return reject(new Error('Cloudinary upload error'));
           }
-          resolve(result.secure_url);
-        }).end(req.file.buffer); // Use the file buffer from multer
+          resolve(result.secure_url); // Mendapatkan URL foto yang diunggah
+        }).end(req.file.buffer); // Menggunakan buffer file dari multer
       });
-      url_photos = cloudinaryResult;
+      url_photos = cloudinaryResult; // Menyimpan URL foto
     }
 
-    await pool.query(
-      'UPDATE actors SET country_id = $1, name = $2, birthdate = $3, url_photos = COALESCE($4, url_photos) WHERE id = $5',
+    // Update actor di database
+    const result = await pool.query(
+      'UPDATE actors SET country_id = $1, name = $2, birthdate = $3, url_photos = COALESCE($4, url_photos) WHERE id = $5 RETURNING *',
       [country_id, name, birth_date, url_photos, id]
     );
 
-    res.json({ success: true, message: 'Actor updated' });
+    // Jika actor tidak ditemukan
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Actor not found' });
+    }
+
+    // Mengembalikan data actor yang telah diperbarui
+    res.json({ success: true, message: 'Actor updated', actor: result.rows[0] });
   } catch (error) {
     console.error('Error updating actor:', error);
     res.status(500).json({ error: 'Server Error' });
@@ -737,7 +746,6 @@ app.delete('/actors/:id', async (req, res) => {
     res.json({ success: true, message: 'Actor deleted' });
   } catch (error) {
     console.error('Error deleting actor:', error);
-    res.status(500).json({ error: 'Server Error' });
   }
 });
 
@@ -806,19 +814,70 @@ app.delete("/comments", async (req, res) => {
 });
 
 // Add a new movie
-app.post('/api/movies', async (req, res) => {
-  const { title, alt_title, year, availability, synopsis, trailer } = req.body;
+app.post('/api/movies', upload.single('photo'), async (req, res) => {
+  const { title, alt_title, year, availability, synopsis, trailer, country_id, genres, awards, actors } = req.body;
 
   try {
+    let images = null;
+
+    if (req.file) {
+      images = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream((error, result) => {
+          if (error) {
+            return reject(error);
+          }
+          resolve(result.secure_url);
+        });
+        uploadStream.end(req.file.buffer);
+      });
+    } else {
+      console.log("No file uploaded");
+    }
+
+    // Print movie data
+    console.log("Received data:", req.body);
+
     const query = `
-      INSERT INTO movies (title, alt_title, availability, synopsis, trailer, year)
-      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;
-    `;
-    const values = [title, alt_title, availability, synopsis, trailer, year];
-    
+    INSERT INTO movies (title, alt_title, availability, synopsis, trailer, year, images, status, country_id)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *;
+  `;
+    const values = [title, alt_title, availability, synopsis, trailer, year, images, 'Unapproved', country_id];
+
     // Execute the query
     const result = await pool.query(query, values);
-    
+
+    const movieId = result.rows[0].id;
+
+    if (genres && genres.length > 0) {
+      const genreQueries = genres.map((genreId) => {
+        return pool.query(
+          'INSERT INTO movie_genre (movie_id, genre_id) VALUES ($1, $2)',
+          [movieId, genreId]
+        );
+      });
+      await Promise.all(genreQueries);
+    }
+
+    if (awards && awards.length > 0) {
+      const awardQueries = awards.map((awardId) => {
+        return pool.query(
+          'INSERT INTO movie_award (movie_id, award_id) VALUES ($1, $2)',
+          [movieId, awardId]
+        );
+      });
+      await Promise.all(awardQueries);
+    }
+
+    if (actors && actors.length > 0) {
+      const actorQueries = actors.map((actorId) => {
+        return pool.query(
+          'INSERT INTO movie_actor (movie_id, actor_id) VALUES ($1, $2)',
+          [movieId, actorId]
+        );
+      });
+      await Promise.all(actorQueries);
+    }
+
     // Return the inserted movie
     res.json(result.rows[0]);
   } catch (error) {
@@ -829,28 +888,28 @@ app.post('/api/movies', async (req, res) => {
 
 app.post('/api/watchlist', async (req, res) => {
   const { username, movieId } = req.body;  // Ambil `username` sesuai data yang dikirimkan dari frontend
-  
-  try {
-      // Cek apakah movie sudah ada di watchlist user berdasarkan `username`
-      const existingEntry = await pool.query(
-          'SELECT * FROM user_watchlist WHERE username = $1 AND movie_id = $2',
-          [username, movieId]
-      );
-      
-      if (existingEntry.rows.length > 0) {
-          return res.status(400).json({ message: 'Movie already in watchlist' });
-      }
 
-      // Insert movie ke watchlist user
-      await pool.query(
-          'INSERT INTO user_watchlist (username, movie_id) VALUES ($1, $2)',
-          [username, movieId]
-      );
-      
-      res.status(201).json({ message: 'Movie added to watchlist' });
+  try {
+    // Cek apakah movie sudah ada di watchlist user berdasarkan `username`
+    const existingEntry = await pool.query(
+      'SELECT * FROM user_watchlist WHERE username = $1 AND movie_id = $2',
+      [username, movieId]
+    );
+
+    if (existingEntry.rows.length > 0) {
+      return res.status(400).json({ message: 'Movie already in watchlist' });
+    }
+
+    // Insert movie ke watchlist user
+    await pool.query(
+      'INSERT INTO user_watchlist (username, movie_id) VALUES ($1, $2)',
+      [username, movieId]
+    );
+
+    res.status(201).json({ message: 'Movie added to watchlist' });
   } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Server error' });
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -859,15 +918,17 @@ app.get('/api/watchlist/:username', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT m.id, m.title, m.year, m.images, 
-              COALESCE(AVG(c.rate), 0) AS rating 
+              COALESCE(AVG(c.rate), 0) AS rating,
+              MAX(uw.added_at) AS added_at 
        FROM movies m
        JOIN user_watchlist uw ON m.id = uw.movie_id
        LEFT JOIN comments c ON m.id = c.movie_id
        WHERE uw.username = $1
-       GROUP BY m.id`,
+       GROUP BY m.id
+       ORDER BY added_at DESC`, // Ensure ordering by the watchlist added_at column
       [username]
     );
-    
+
     if (result.rows.length > 0) {
       res.status(200).json(result.rows);
     } else {
@@ -878,7 +939,6 @@ app.get('/api/watchlist/:username', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 
 
 app.delete('/api/watchlist/:username/:movieId', async (req, res) => {
@@ -905,3 +965,4 @@ app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
 
+module.exports = {app};

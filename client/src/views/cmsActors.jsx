@@ -15,7 +15,7 @@ const CmsActors = () => {
   const [editId, setEditId] = useState(null);
   const [previewImage, setPreviewImage] = useState(''); // State for image preview
   // const [sortConfig, setSortConfig] = useState({ key: null, order: 'asc' });
-  // const [sortedActors, setSortedActors] = useState(actorsData);
+  const [sortedActors, setSortedActors] = useState(actorsData);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -52,7 +52,7 @@ const CmsActors = () => {
 
   const fetchCountries = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production.up.railway.app/countries');
+      const response = await fetch('http://localhost:3005/api/countries');
       const data = await response.json();
       setCountries(data);
     } catch (error) {
@@ -62,14 +62,14 @@ const CmsActors = () => {
 
   const fetchActors = async () => {
     try {
-      const response = await fetch("https://webdev-dramaku-production.up.railway.app/actors");
+      const response = await fetch("http://localhost:3005/actors");
       if (!response.ok) {
         throw new Error("Failed to fetch actors");
       }
       const data = await response.json();
       console.log(data); // Cek apakah data sudah memiliki kolom birth_date
       setActorsData(data); 
-      // setSortedActors(data); // Salin data ke sortedActors untuk ditampilkan
+      setSortedActors(data); // Salin data ke sortedActors untuk ditampilkan
     } catch (error) {
       console.error("Error fetching actors:", error);
     }
@@ -105,7 +105,7 @@ const CmsActors = () => {
     const confirmDelete = window.confirm("Are you sure you want to delete this actor?");
     if(confirmDelete)
       try {
-      await fetch(`https://webdev-dramaku-production.up.railway.app/actors/${id}`, {
+      await fetch(`http://localhost:3005/actors/${id}`, {
         method: "DELETE",
       });
       fetchActors(); // Refresh data after delete
@@ -131,7 +131,7 @@ const CmsActors = () => {
     formDataForActor.append('photo', formData.photo);
 
     try {
-      const response = await fetch("https://webdev-dramaku.vercel.app/actors", {
+      const response = await fetch("http://localhost:3005/actors", {
         method: "POST",
         body: formDataForActor,
       });

@@ -13,7 +13,8 @@ const CardMovie = ({ poster, title, year, genre, rating, views, onClick }) => {
           <p className="text-gray-400">Year: {year}</p>
         </div>
         <div className="flex items-center justify-end"> {/* Stays at the bottom */}
-          <p className="text-yellow-400">⭐ {rating}</p>
+          <p className="text-yellow-400">⭐ {rating} </p>
+          
         </div>
       </div>
     </div>

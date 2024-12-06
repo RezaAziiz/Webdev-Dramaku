@@ -10,7 +10,7 @@ export default function Register() {
   const [error, setError] = useState('');
   const navigate = useNavigate(); // Create navigate function for redirection
 
-  const validateForm = () => { 
+  const validateForm = () => {
     if (!username || username.length < 3) {
       setError("Username must be at least 3 characters long.");
       return false;
@@ -19,15 +19,12 @@ export default function Register() {
       setError("Please enter a valid email.");
       return false;
     }
-    // Ensure the password has at least 6 characters and contains at least one letter, one number, and one special character (including underscore)
-    if (password.length < 6 || !/(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>_])/.test(password)) {
-      setError("Password must be at least 6 characters long and contain at least one letter, one number, and one special character.");
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long.");
       return false;
     }
     return true;
-};
-
-
+  };
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -37,7 +34,7 @@ export default function Register() {
     if (!validateForm()) return;
 
     try {
-      const response = await fetch("https://webdev-dramaku-production.up.railway.app/register", {
+      const response = await fetch("http://localhost:3005/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -48,7 +45,7 @@ export default function Register() {
       const data = await response.json();
 
       if (response.ok) {
-        // setMessage("Registration successful! Your role is: ");
+        setMessage("Registration successful! Your role is: ");
         setTimeout(() => navigate("/login"), 2000); // Redirect to login page after 2 seconds
       } else {
         setError(data.message || "Registration failed.");

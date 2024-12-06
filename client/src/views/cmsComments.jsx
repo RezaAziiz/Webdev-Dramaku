@@ -10,44 +10,39 @@ const Comments = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectAll, setSelectAll] = useState(false);
   const [checkedItems, setCheckedItems] = useState({});
-  const [commentsData, setCommentsData] = useState([]);
+  const [commentsData, setCommentsData] = useState([]);  // Initially an empty array
   const [currentPage, setCurrentPage] = useState(1);
 
   const fetchComments = async () => {
     try {
-      const response = await axios.get("https://webdev-dramaku-production.up.railway.app/comments", {
-        params: { searchTerm, shows },
+      const response = await axios.get("http://localhost:3005/comments", {
+        params: { searchTerm, shows, page: currentPage },
       });
-      setCommentsData(response.data);
+  
+      setCommentsData(response.data); // Set the comments data
+  
     } catch (error) {
       console.error("Error fetching comments:", error);
     }
   };
 
-  
-
   useEffect(() => {
     fetchComments();
-  }, [searchTerm, shows]);
+  }, [searchTerm, shows, currentPage]);
 
-  // Filter and search
-  
-  // Filter and search
-const filteredComments = commentsData.filter((comment) => {
-  console.log("Filtering:", { filter, rate: comment.rate });
-  return (
-    (filter === "" || Number(comment.rate) === Number(filter)) &&
-    comment.username.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-});
-  
+  // Filter and search logic
+  const filteredComments = commentsData.filter((comment) => {
+    return (
+      (filter === "" || Number(comment.rate) === Number(filter)) &&
+      comment.username.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
-  // Pagination calculations
+  // Pagination calculations based on filtered comments
   const totalPages = Math.ceil(filteredComments.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const currentComments = filteredComments.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
-  // Function to render stars based on the rating value
   const renderStars = (rate) => {
     return "★".repeat(rate) + "☆".repeat(5 - rate);
   };
@@ -61,19 +56,23 @@ const filteredComments = commentsData.filter((comment) => {
 
   const handleApprove = async () => {
     const idsToApprove = currentComments
-      .filter((_, index) => checkedItems[index])
+      .filter((_, index) => checkedItems[index]) // Get the ids of checked comments
       .map(comment => comment.id);
-
+  
     try {
-      await Promise.all(idsToApprove.map(id => axios.put(`https://webdev-dramaku-production.up.railway.app/comments/${id}`, { status: true })));
-      fetchComments(); // Refresh comments after updating
+      // Update status to true (approved) for selected comments
+      await Promise.all(idsToApprove.map(id => 
+        axios.put(`http://localhost:3005/comments/${id}`, { status: true })
+      ));
+      fetchComments(); // Refresh the list of comments after approval
     } catch (error) {
       console.error("Error approving comments:", error);
     }
   };
+  
 
   const handleDelete = async () => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this comments?");
+    const confirmDelete = window.confirm("Are you sure you want to delete these comments?");
     if (!confirmDelete) return;
 
     const idsToDelete = currentComments
@@ -81,7 +80,7 @@ const filteredComments = commentsData.filter((comment) => {
       .map(comment => comment.id);
 
     try {
-      await axios.delete("https://webdev-dramaku-production.up.railway.app/comments", { data: { ids: idsToDelete } });
+      await axios.delete("http://localhost:3005/comments", { data: { ids: idsToDelete } });
       fetchComments(); // Refresh the comments list
     } catch (error) {
       console.error("Error deleting comments:", error);
@@ -97,7 +96,7 @@ const filteredComments = commentsData.filter((comment) => {
               <label htmlFor="filter" className="mr-2">Filtered by:</label>
               <select
                 id="filter"
-                className="bg-gray-100 text-yellow-400 p-2 rounded"
+                className="bg-gray-100 text-gray-400 p-2 rounded"
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
               >
@@ -107,20 +106,6 @@ const filteredComments = commentsData.filter((comment) => {
                 <option value="3">★★★</option>
                 <option value="2">★★</option>
                 <option value="1">★</option>
-              </select>
-            </div>
-
-            <div className="flex items-center">
-              <label htmlFor="shows" className="mr-2">Shows:</label>
-              <select
-                id="shows"
-                className="bg-gray-100 p-2 rounded text-black"
-                value={shows}
-                onChange={(e) => setShows(parseInt(e.target.value, 10))}
-              >
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="50">50</option>
               </select>
             </div>
 
@@ -134,55 +119,53 @@ const filteredComments = commentsData.filter((comment) => {
           </div>
 
           {/* Comments Table */}
-          <div className="overflow-y-auto rounded-xl">
-            <table className="min-w-full bg-gray-800 rounded-xl">
-              <thead className="bg-gray-800 text-white">
-                <tr>
-                <th style={{ width: '100px' }} className="px-4 py-3">
+          <table className="min-w-full bg-gray-800 rounded-xl">
+            <thead className="bg-gray-800 text-white">
+              <tr>
+                <th className="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    className="mr-2"
+                    checked={selectAll}
+                    onChange={() => {
+                      setSelectAll(!selectAll);
+                      setCheckedItems(currentComments.reduce((acc, _, index) => {
+                        acc[index] = !selectAll;
+                        return acc;
+                      }, {}));
+                    }}
+                  />
+                  Select All
+                </th>
+                <th className="px-4 py-3">Username</th>
+                <th className="px-4 py-3">Rate</th>
+                <th className="px-4 py-3">Drama</th>
+                <th className="px-4 py-3">Comments</th>
+                <th className="px-4 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentComments.map((comment, index) => (
+                <tr key={comment.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-100'}>
+                  <td className="p-3 text-gray-800">
                     <input
                       type="checkbox"
                       className="mr-2"
-                      checked={selectAll}
-                      onChange={() => {
-                        setSelectAll(!selectAll);
-                        setCheckedItems(currentComments.reduce((acc, _, index) => {
-                          acc[index] = !selectAll;
-                          return acc;
-                        }, {}));
-                      }}
+                      checked={checkedItems[index] || false}
+                      onChange={() => handleCheckboxChange(index)}
                     />
-                    Select All
-                  </th>
-                  <th style={{ width: '100px' }} className="px-4 py-3">Username</th>
-                  <th style={{ width: '100px' }} className="px-4 py-3">Rate</th>
-                  <th style={{ width: '100px' }} className="px-4 py-3">Drama</th>
-                  <th style={{ width: '100px' }} className="px-4 py-3">Comments</th>
-                  <th style={{ width: '100px' }} className="px-4 py-3">Status</th>
+                  </td>
+                  <td className="p-3 text-gray-800">{comment.username}</td>
+                  <td className="p-3 text-yellow-400">{renderStars(comment.rate)}</td>
+                  <td className="p-3 text-gray-800">{comment.drama}</td>
+                  <td className="p-3 text-gray-800">{comment.comment}</td>
+                  <td className={`p-3 text-${comment.status ? 'green' : 'red'}-500`}>
+                    {comment.status ? "Approved" : "Unapproved"}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {currentComments.map((comment, index) => (
-                  <tr key={comment.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-100'}>
-                    <td className="p-3 text-gray-800">
-                      <input
-                        type="checkbox"
-                        className="mr-2"
-                        checked={checkedItems[index] || false}
-                        onChange={() => handleCheckboxChange(index)}
-                      />
-                    </td>
-                    <td className="p-3 text-gray-800">{comment.username}</td>
-                    <td className="p-3 text-yellow-400">{renderStars(comment.rate)}</td>
-                    <td className="p-3 text-gray-800">{comment.drama}</td>
-                    <td className="p-3 text-gray-800">{comment.comment}</td>
-                    <td className={`p-3 text-${comment.status ? 'green' : 'red'}-500`}>
-                      {comment.status ? "Approved" : "Unapproved"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
 
           {/* Actions */}
           <div className="mt-4">
@@ -212,8 +195,7 @@ const filteredComments = commentsData.filter((comment) => {
             <button
               className="p-2 bg-gray-200 text-black rounded-md hover:bg-gray-100 font-bold"
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}>{">"}
-            </button>
+              disabled={currentPage === totalPages}>{">"}</button>
             <button
               className="p-2 bg-gray-200 text-black rounded-md hover:bg-gray-100 font-bold"
               onClick={() => setCurrentPage(totalPages)}
