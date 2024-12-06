@@ -36,7 +36,7 @@ const upload = multer({ storage: multer.memoryStorage() }); // Using memory stor
 // PostgreSQL connection details
 const pool = new Pool({
   user: process.env.POSTGRES_USER,
-  Host: 'host.docker.internal',
+  Host: process.env..Host,
   database: process.env.POSTGRES_DB,
   password: process.env.POSTGRES_PASSWORD,
   port: 5432,
