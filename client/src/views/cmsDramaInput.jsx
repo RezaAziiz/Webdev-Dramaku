@@ -84,7 +84,7 @@ const DramaInput = () => {
         }
 
         try {
-            const response = await fetch('http://localhost:3005/api/movies', {
+            const response = await fetch('webdev-dramaku-production.up.railway.app/api/movies', {
                 method: 'POST',
                 body: formData,
             });
@@ -119,7 +119,7 @@ const DramaInput = () => {
 
     const fetchGenres = async () => {
         try {
-            const response = await fetch('http://localhost:3005/api/genres');
+            const response = await fetch('webdev-dramaku-production.up.railway.app/api/genres');
             const data = await response.json();
             setGenres(data);
         } catch (error) {
@@ -129,7 +129,7 @@ const DramaInput = () => {
 
     const fetchCountries = async () => {
         try {
-            const response = await fetch('http://localhost:3005/api/countries');
+            const response = await fetch('webdev-dramaku-production.up.railway.app/api/countries');
             const data = await response.json();
             setCountries(data);
         } catch (error) {
@@ -140,7 +140,7 @@ const DramaInput = () => {
 
     const fetchAwards = async () => {
         try {
-            const response = await fetch('http://localhost:3005/api/awards');
+            const response = await fetch('webdev-dramaku-production.up.railway.app/api/awards');
             const data = await response.json();
 
             // Sort data berdasarkan nama award (ascending)
@@ -162,7 +162,7 @@ const DramaInput = () => {
 
     const fetchActors = async () => {
         try {
-            const response = await fetch('http://localhost:3005/actors');
+            const response = await fetch('webdev-dramaku-production.up.railway.app/actors');
             const data = await response.json();
             setActors(data);
         } catch (error) {
