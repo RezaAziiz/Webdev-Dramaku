@@ -17,22 +17,23 @@ app.use(express.json());
 
 // Cloudinary configuration
 cloudinary.config({
-  cloud_name: 'dtk2yqead',
-  api_key: '417426998347937',
-  api_secret: 'nhiBmTCI347fdl2BLyHrW7moYTE',
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 
 const upload = multer({ storage: multer.memoryStorage() }); // Using memory storage for direct upload to Cloudinary
 
-// PostgreSQL connection details
+// Koneksi ke PostgreSQL menggunakan environment variable DATABASE_URL
 const pool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'postgres',
-  password: 'Aziiz_4321',
-  port: 5432,
+  connectionString: process.env.DATABASE_URL,
 });
+
+// Mengecek koneksi ke database
+pool.connect()
+  .then(() => console.log('Connected to PostgreSQL database'))
+  .catch((err) => console.error('Database connection error', err));
 
 const client = new OAuth2Client("193966095713-ooq3r03aaanmf67tudroa67ccctfqvk6.apps.googleusercontent.com");
 
