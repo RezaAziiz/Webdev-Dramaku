@@ -13,15 +13,15 @@ const cloudinary = require('cloudinary').v2; // Cloudinary SDK
 require('dotenv').config();
 console.log(process.env.PGUSER);
 // Setup CORS to allow frontend access
+app.use(express.json());
+
 const corsOptions = {
-  origin: "https://webdev-dramaku.vercel.app/", // Mengizinkan semua domain
-  methods: ["GET", "POST", "PUT", "DELETE"], // Metode HTTP yang diizinkan
-  allowedHeaders: ["Content-Type", "Authorization"], // Header yang diizinkan
+  origin: "https://webdev-dramaku.vercel.app", // Tanpa trailing slash
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
-app.use(cors(corsOptions));
-
-app.use(express.json());
+app.use(cors(corsOptions)); // Pastikan ini dipasang di awal middleware
 
 // Cloudinary configuration
 cloudinary.config({
