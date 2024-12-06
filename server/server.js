@@ -27,13 +27,23 @@ const upload = multer({ storage: multer.memoryStorage() }); // Using memory stor
 
 // Koneksi ke PostgreSQL menggunakan environment variable DATABASE_URL
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  user: process.env.PGUSER,
+  host: process.env.PGHOST,
+  database: process.env.PGDATABASE,
+  password: process.env.PGPASSWORD,
+  port: process.env.PGPORT,
+  ssl: {
+    rejectUnauthorized: false,  // Jika dibutuhkan, sesuaikan dengan pengaturan SSL
+  },
 });
 
-// Mengecek koneksi ke database
 pool.connect()
-  .then(() => console.log('Connected to PostgreSQL database'))
-  .catch((err) => console.error('Database connection error', err));
+  .then(() => {
+    console.log('Database connected successfully');
+  })
+  .catch((err) => {
+    console.error('Database connection error', err.stack);
+  });
 
 const client = new OAuth2Client("193966095713-ooq3r03aaanmf67tudroa67ccctfqvk6.apps.googleusercontent.com");
 
