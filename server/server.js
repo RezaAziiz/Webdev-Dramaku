@@ -35,11 +35,11 @@ const upload = multer({ storage: multer.memoryStorage() }); // Using memory stor
 
 // PostgreSQL connection details
 const pool = new Pool({
-  user: process.env.POSTGRES_USER,
-  Host: process.env..Host,
-  database: process.env.POSTGRES_DB,
-  password: process.env.POSTGRES_PASSWORD,
-  port: 5432,
+  user: process.env.POSTGRES_USER, // Sesuaikan dengan variabel POSTGRES_USER di .env
+  host: process.env.DB_HOST, // Sesuaikan dengan DB_HOST di .env
+  database: process.env.POSTGRES_DB, // Sesuaikan dengan POSTGRES_DB di .env
+  password: process.env.POSTGRES_PASSWORD, // Sesuaikan dengan POSTGRES_PASSWORD di .env
+  port: process.env.DB_PORT || 5432, // Sesuaikan dengan DB_PORT di .env
 });
 
 const client = new OAuth2Client("193966095713-ooq3r03aaanmf67tudroa67ccctfqvk6.apps.googleusercontent.com");
