@@ -41,7 +41,7 @@ export default function Login() {
     }
   
     try {
-      const response = await axios.post("webdev-dramaku-production.up.railway.app/login", {
+      const response = await axios.post("https://webdev-dramaku-production.up.railway.app/login", {
         username,
         password,
       });
@@ -76,7 +76,7 @@ export default function Login() {
   const handleGoogleLoginSuccess = async (credentialResponse) => {
     try {
       const token = credentialResponse.credential;
-      const response = await axios.post("webdev-dramaku-production.up.railway.app/google-login", { token });
+      const response = await axios.post("https://webdev-dramaku-production.up.railway.app/google-login", { token });
 
       localStorage.setItem("token", response.data.token);
       setIsAuthenticated(true);

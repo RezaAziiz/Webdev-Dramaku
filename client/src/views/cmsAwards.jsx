@@ -26,7 +26,7 @@ const CmsAwards = () => {
 
   const fetchCountries = async () => {
     try {
-      const response = await fetch('webdev-dramaku-production.up.railway.app/api/countries');
+      const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/countries');
       const data = await response.json();
       setCountries(data);
     } catch (error) {
@@ -36,7 +36,7 @@ const CmsAwards = () => {
 
   const fetchAwards = async () => {
     try {
-      const response = await fetch('webdev-dramaku-production.up.railway.app/api/awards');
+      const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/awards');
       const data = await response.json();
       setAwardsData(data);
     } catch (error) {
@@ -68,7 +68,7 @@ const CmsAwards = () => {
 
   const handleSaveClick = async () => {
     try {
-      await fetch(`webdev-dramaku-production.up.railway.app/awards/${editId}`, {
+      await fetch(`https://webdev-dramaku-production.up.railway.app/awards/${editId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editedAward),
@@ -102,7 +102,7 @@ const CmsAwards = () => {
 
     try {
       // Send a POST request to the awards API
-      const response = await fetch("webdev-dramaku-production.up.railway.app/awards", {
+      const response = await fetch("https://webdev-dramaku-production.up.railway.app/awards", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -160,7 +160,7 @@ const CmsAwards = () => {
     const confirmDelete = window.confirm("Are you sure you want to delete this award?");
     if (confirmDelete) {
       try {
-        const response = await fetch(`webdev-dramaku-production.up.railway.app/awards/${id}`, {
+        const response = await fetch(`https://webdev-dramaku-production.up.railway.app/awards/${id}`, {
           method: 'DELETE',
         });
 
