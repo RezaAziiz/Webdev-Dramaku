@@ -272,63 +272,6 @@ const MovieDetail = () => {
           <div>No movie data available</div>
         )}
 
-        {/* Stars Section */}
-        <div className="my-8 text-center">
-          <h2 className="text-2xl text-gray-200 font-bold mb-4">Stars</h2>
-          <div className="flex justify-center space-x-7 flex-wrap">
-            {movie.actors && movie.actors.length > 0 ? (
-              [...movie.actors]
-                .sort((a, b) => (a.url_photos ? -1 : 1)) // Sort: prioritize actors with URLs
-                .slice(0, 9)
-                .map((actor, index) => (
-                  <div key={index} className="flex flex-col items-center flex-shrink-0">
-                    <img
-                      src={actor.url_photos || 'https://via.placeholder.com/100'}
-                      alt={actor.name}
-                      className="w-20 h-20 bg-gray-700 rounded-full mb-2 object-cover"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = 'https://via.placeholder.com/100';
-                      }}
-                    />
-                    <p className="text-gray-200 whitespace-normal break-words text-center max-w-[70px] text-xs">
-                      {actor.name && typeof actor.name === 'string' && actor.name.split(' ').length > 3
-                        ? actor.name.split(' ').map((word, i) => (
-                          <span key={i}>
-                            {word}
-                            <br />
-                          </span>
-                        ))
-                        : actor.name || "No name available"}
-                    </p>
-                  </div>
-                ))
-            ) : (
-              <p className="text-gray-400">No actors available</p>
-            )}
-          </div>
-        </div>
-
-        {/* Video Section */}
-        <div className="bg-gray-800 rounded mb-8 p-10">
-          <div className="flex items-center justify-center">
-            {videoId ? (
-              <iframe
-                width="560"
-                height="315"
-                src={`https://www.youtube.com/embed/${videoId}`}
-                title="YouTube video player"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="rounded shadow-lg"
-              ></iframe>
-            ) : (
-              <p>No trailer available</p>
-            )}
-          </div>
-        </div>
-
         {/* Comments Section */}
         <div className="bg-gray-800 p-4 rounded mb-8">
           <div className="flex justify-between items-center mb-4">

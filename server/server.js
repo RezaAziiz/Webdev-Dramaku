@@ -369,37 +369,27 @@ app.get('/api/genres', async (req, res) => {
 //   }
 // });
 
-// Endpoint untuk menambahkan komentar
 app.post('/movies/:id/comments', authenticateToken, async (req, res) => {
   const movieId = parseInt(req.params.id);
-  const { commentText, rating, status } = req.body; // Ambil data dari request body
+  const { commentText, rating, status } = req.body; // Ambil status dari request body
   const userName = req.user.username; // Ambil username dari token yang terautentikasi
-
-  // Log the received data to the terminal
-  console.log("Received comment data:", {
-    movieId,
-    userName,
-    commentText,
-    rating,
-    status
-  });
 
   if (!commentText || !rating) {
     return res.status(400).json({ message: "Comment text and rating are required." });
   }
 
   try {
-    // Insert comment into the database with the current timestamp
+    // Insert komentar ke database
     await pool.query(
-      "INSERT INTO comments (movie_id, username, comment, rate, status, created_at) VALUES ($1, $2, $3, $4, false, CURRENT_TIMESTAMP)",
-      [movieId, userName, commentText, rating, false]
+      "INSERT INTO comments (movie_id, username, comment, rate, status) VALUES ($1, $2, $3, $4, $5)", // Ubah query untuk menggunakan $5 untuk status
+      [movieId, userName, commentText, rating, status] // Tambahkan status di akhir array
     );
-  
+
     res.status(201).json({ message: "Comment added successfully." });
   } catch (error) {
     console.error("Error adding comment:", error);
     res.status(500).json({ message: "Server error while adding comment." });
-  }  
+  }
 });
 
 
