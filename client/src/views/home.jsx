@@ -16,7 +16,7 @@ const Home = () => {
   const fetchMovies = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`https://webdev-dramaku-production.up.railway.app/movies`);
+      const response = await fetch(`http://localhost:3005/movies`);
       const data = await response.json();
 
       if (data.length > 0) {
