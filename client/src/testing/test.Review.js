@@ -43,7 +43,7 @@ describe('CommentSection', () => {
     // Memastikan axios dipanggil dengan benar
     await waitFor(() =>
       expect(axios.post).toHaveBeenCalledWith(
-        'https://webdev-dramaku-production.up.railway.app/movies/1/comments',
+        'https://webdev-dramaku-production-72b3.up.railway.app/movies/1/comments',
         { commentText: 'Great movie!', rating: 5 },
         { headers: { Authorization: `Bearer mocked_token` } }
       )

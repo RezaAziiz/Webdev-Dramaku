@@ -52,7 +52,7 @@ const CmsActors = () => {
 
   const fetchCountries = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/countries');
+      const response = await fetch('https://webdev-dramaku-production-72b3.up.railway.app/api/countries');
       const data = await response.json();
       setCountries(data);
     } catch (error) {
@@ -62,7 +62,7 @@ const CmsActors = () => {
 
   const fetchActors = async () => {
     try {
-      const response = await fetch("https://webdev-dramaku-production.up.railway.app/actors");
+      const response = await fetch("https://webdev-dramaku-production-72b3.up.railway.app/actors");
       if (!response.ok) {
         throw new Error("Failed to fetch actors");
       }
@@ -105,7 +105,7 @@ const CmsActors = () => {
     const confirmDelete = window.confirm("Are you sure you want to delete this actor?");
     if(confirmDelete)
       try {
-      await fetch(`https://webdev-dramaku-production.up.railway.app/actors/${id}`, {
+      await fetch(`https://webdev-dramaku-production-72b3.up.railway.app/actors/${id}`, {
         method: "DELETE",
       });
       fetchActors(); // Refresh data after delete
@@ -131,7 +131,7 @@ const CmsActors = () => {
     formDataForActor.append('photo', formData.photo);
 
     try {
-      const response = await fetch("https://webdev-dramaku-production.up.railway.app/actors", {
+      const response = await fetch("https://webdev-dramaku-production-72b3.up.railway.app/actors", {
         method: "POST",
         body: formDataForActor,
       });
@@ -183,7 +183,7 @@ const handleSaveClick = async (id) => {
     }
   
     try {
-      const response = await fetch(`https://webdev-dramaku-production.up.railway.app/actors/${id}`, {
+      const response = await fetch(`https://webdev-dramaku-production-72b3.up.railway.app/actors/${id}`, {
         method: 'PUT',
         body: formDataForUpdate,
       });

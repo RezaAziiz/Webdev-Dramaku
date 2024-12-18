@@ -24,7 +24,7 @@ const Watchlist = () => {
         if (isLoggedIn && username) {
             const fetchWatchlist = async () => {
                 try {
-                    const response = await fetch(`https://webdev-dramaku-production.up.railway.app/api/watchlist/${username}`);
+                    const response = await fetch(`https://webdev-dramaku-production-72b3.up.railway.app/api/watchlist/${username}`);
                     if (!response.ok) {
                         const errorData = await response.text();
                         console.error('Error fetching watchlist:', errorData);
@@ -47,7 +47,7 @@ const Watchlist = () => {
 
     const removeFromWatchlist = async (movieId) => {
         try {
-            const response = await fetch(`https://webdev-dramaku-production.up.railway.app/api/watchlist/${username}/${movieId}`, {
+            const response = await fetch(`https://webdev-dramaku-production-72b3.up.railway.app/api/watchlist/${username}/${movieId}`, {
                 method: 'DELETE',
             });
             if (response.ok) {
