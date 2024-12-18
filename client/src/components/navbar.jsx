@@ -236,7 +236,7 @@ const Navbar = () => {
 
   const fetchMovies = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production-72b3.up.railway.app/movies');
+      const response = await fetch('https://webdev-dramaku-production.up.railway.app/movies');
       const data = await response.json();
 
       if (data.length > 0) {
@@ -249,7 +249,7 @@ const Navbar = () => {
 
   const fetchActors = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production-72b3.up.railway.app/actors');
+      const response = await fetch('https://webdev-dramaku-production.up.railway.app/actors');
       const data = await response.json();
       setActors(data);
     } catch (error) {
@@ -286,7 +286,7 @@ const Navbar = () => {
 
   const fetchGenres = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production-72b3.up.railway.app/api/genres');
+      const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/genres');
       const data = await response.json();
       setGenres(data); // Menyimpan data genre ke state
     } catch (error) {
@@ -296,7 +296,7 @@ const Navbar = () => {
 
   const fetchCountries = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production-72b3.up.railway.app/api/countries');
+      const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/countries');
       const data = await response.json();
       setCountries(data);
     } catch (error) {
@@ -307,7 +307,7 @@ const Navbar = () => {
 
   const fetchAwards = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production-72b3.up.railway.app/api/awards');
+      const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/awards');
       const data = await response.json();
       setAwards(data);
     } catch (error) {

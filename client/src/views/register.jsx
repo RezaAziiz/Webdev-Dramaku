@@ -34,7 +34,7 @@ export default function Register() {
     if (!validateForm()) return;
 
     try {
-      const response = await fetch("https://webdev-dramaku-production-72b3.up.railway.app/register", {
+      const response = await fetch("https://webdev-dramaku-production.up.railway.app/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

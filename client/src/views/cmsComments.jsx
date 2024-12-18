@@ -15,7 +15,7 @@ const Comments = () => {
 
   const fetchComments = async () => {
     try {
-      const response = await axios.get("https://webdev-dramaku-production-72b3.up.railway.app/comments", {
+      const response = await axios.get("https://webdev-dramaku-production.up.railway.app/comments", {
         params: { searchTerm, shows, page: currentPage },
       });
   
@@ -62,7 +62,7 @@ const Comments = () => {
     try {
       // Update status to true (approved) for selected comments
       await Promise.all(idsToApprove.map(id => 
-        axios.put(`https://webdev-dramaku-production-72b3.up.railway.app/comments/${id}`, { status: true })
+        axios.put(`https://webdev-dramaku-production.up.railway.app/comments/${id}`, { status: true })
       ));
       fetchComments(); // Refresh the list of comments after approval
     } catch (error) {
@@ -80,7 +80,7 @@ const Comments = () => {
       .map(comment => comment.id);
 
     try {
-      await axios.delete("https://webdev-dramaku-production-72b3.up.railway.app/comments", { data: { ids: idsToDelete } });
+      await axios.delete("https://webdev-dramaku-production.up.railway.app/comments", { data: { ids: idsToDelete } });
       fetchComments(); // Refresh the comments list
     } catch (error) {
       console.error("Error deleting comments:", error);

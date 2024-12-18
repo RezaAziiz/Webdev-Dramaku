@@ -15,7 +15,7 @@ const SearchResult = () => {
 
       if (searchTerm) {
         try {
-          const response = await fetch(`https://webdev-dramaku-production-72b3.up.railway.app/api/search?term=${searchTerm}`);
+          const response = await fetch(`https://webdev-dramaku-production.up.railway.app/api/search?term=${searchTerm}`);
           const data = await response.json();
 
           if (response.ok) {
