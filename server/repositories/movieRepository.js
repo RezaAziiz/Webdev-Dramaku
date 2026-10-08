@@ -84,3 +84,20 @@ exports.getSuggestions = async (formattedSearchTerm) => {
   const result = await pool.query(query, [formattedSearchTerm]);
   return result.rows.map(row => row.title);
 };
+
+exports.createMovie = async (title, alt_title, availability, synopsis, trailer, year, images, country_id, genres, awards, actors) => {
+  const query = `INSERT INTO movies (title, alt_title, availability, synopsis, trailer, year, images, status, country_id) VALUES ($1, $2, $3, $4, $5, $6, $7, 'Unapproved', $8) RETURNING *`;
+  const values = [title, alt_title, availability, synopsis, trailer, year, images, country_id];
+  const result = await pool.query(query, values);
+  const movieId = result.rows[0].id;
+  if (genres && genres.length > 0) {
+    await Promise.all(genres.map(genreId => pool.query('INSERT INTO movie_genre (movie_id, genre_id) VALUES ($1, $2)', [movieId, genreId])));
+  }
+  if (awards && awards.length > 0) {
+    await Promise.all(awards.map(awardId => pool.query('INSERT INTO movie_award (movie_id, award_id) VALUES ($1, $2)', [movieId, awardId])));
+  }
+  if (actors && actors.length > 0) {
+    await Promise.all(actors.map(actorId => pool.query('INSERT INTO movie_actor (movie_id, actor_id) VALUES ($1, $2)', [movieId, actorId])));
+  }
+  return result.rows[0];
+};

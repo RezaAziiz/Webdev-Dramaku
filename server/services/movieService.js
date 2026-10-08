@@ -26,3 +26,7 @@ exports.getSuggestions = async (searchTerm) => {
   const formattedSearchTerm = `${term.toLowerCase()}%`;
   return await movieRepository.getSuggestions(formattedSearchTerm);
 };
+
+exports.createMovie = async (title, alt_title, availability, synopsis, trailer, year, images, country_id, genres, awards, actors) => {
+  return await movieRepository.createMovie(title, alt_title, availability, synopsis, trailer, year, images, country_id, genres, awards, actors);
+};
