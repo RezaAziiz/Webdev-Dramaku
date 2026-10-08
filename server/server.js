@@ -1,192 +1,33 @@
 const express = require('express');
 const cors = require('cors');
-const { Pool } = require('pg');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
+
+// Config imports
+const pool = require('./config/db');
+const cloudinary = require('./config/cloudinary');
+
+// Route imports
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+
+// Middleware imports
+const errorMiddleware = require('./middlewares/errorMiddleware');
+const { authenticateToken } = require('./middlewares/authMiddleware');
+
 const app = express();
 const port = 3005;
-const bcrypt = require('bcryptjs');
-const jwt = require("jsonwebtoken");
-const { OAuth2Client } = require("google-auth-library");
-const fs = require('fs');
-const cloudinary = require('cloudinary').v2; // Cloudinary SDK
 
 // Setup CORS to allow frontend access
 app.use(cors());
 app.use(express.json());
 
-// Cloudinary configuration
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
 
 const upload = multer({ storage: multer.memoryStorage() }); // Using memory storage for direct upload to Cloudinary
 
-// Koneksi ke PostgreSQL menggunakan environment variable DATABASE_URL
-const pool = new Pool({
-  user: process.env.PGUSER,
-  host: process.env.PGHOST,
-  database: process.env.PGDATABASE,
-  password: process.env.PGPASSWORD,
-  port: process.env.PGPORT,
-  ssl: {
-    rejectUnauthorized: false,  // Jika dibutuhkan, sesuaikan dengan pengaturan SSL
-  },
-});
-
-pool.connect()
-  .then(() => {
-    console.log('Database connected successfully');
-  })
-  .catch((err) => {
-    console.error('Database connection error', err.stack);
-  });
-
-const client = new OAuth2Client("193966095713-ooq3r03aaanmf67tudroa67ccctfqvk6.apps.googleusercontent.com");
-
-// Middleware untuk autentikasi token
-function authenticateToken(req, res, next) {
-  const token = req.headers["authorization"]?.split(" ")[1];
-  if (!token) return res.sendStatus(401); // Unauthorized
-
-  jwt.verify(token, "your_jwt_secret", (err, user) => {
-    if (err) return res.sendStatus(403); // Forbidden
-    req.user = user;
-    next();
-  });
-}
-
-
-app.post("/login", async (req, res) => {
-  const { username, password } = req.body;
-
-  try {
-    const result = await pool.query(
-      "SELECT username, password, role_id, banned FROM users WHERE username = $1",
-      [username]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const user = result.rows[0];
-
-    // Check if the user is banned
-    if (user.banned) {
-      return res.status(403).json({ message: "Your account has been banned." });
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    const token = jwt.sign(
-      { username: user.username, role: user.role_id, banned: user.banned },
-      "your_jwt_secret",
-      { expiresIn: "1h" }
-    );
-
-    res.json({ token, role: user.role_id, banned: user.banned }); // Include banned in response
-  } catch (error) {
-    console.error("Error during login:", error);
-    res.status(500).send("Server error");
-  }
-});
-
-
-// Fungsi untuk verifikasi token Google
-async function verifyGoogleToken(token) {
-  const ticket = await client.verifyIdToken({
-    idToken: token,
-    audience: "193966095713-ooq3r03aaanmf67tudroa67ccctfqvk6.apps.googleusercontent.com", // Ganti dengan client ID milikmu
-  });
-  return ticket.getPayload(); // Payload akan berisi informasi pengguna
-}
-
-// Endpoint untuk Google Login
-app.post("/google-login", async (req, res) => {
-  try {
-    const googleToken = req.body.token; // Ubah nama variabel agar tidak ada konflik
-
-    const googleUser = await verifyGoogleToken(googleToken);
-
-    let user = await pool.query("SELECT * FROM users WHERE google_id = $1", [googleUser.sub]);
-
-    // Jika pengguna tidak ada dalam database, buat akun baru
-    if (user.rows.length === 0) {
-      await pool.query(
-        "INSERT INTO users (username, email, google_id, role_id, banned) VALUES ($1, $2, $3, 'Writer', FALSE)",
-        [googleUser.name, googleUser.email, googleUser.sub]
-      );
-
-      user = await pool.query("SELECT * FROM users WHERE google_id = $1", [googleUser.sub]);
-    }
-
-    // Cek apakah pengguna dibanned
-    if (user.rows[0].banned) {
-      return res.status(403).json({ message: "Account is banned and cannot login." });
-    }
-
-    // Jika tidak dibanned, buat token JWT
-    const jwtToken = jwt.sign(
-      { username: user.rows[0].username, role: user.rows[0].role_id },
-      "your_jwt_secret",
-      { expiresIn: "1h" }
-    );
-
-    res.json({ token: jwtToken, role: user.rows[0].role_id });
-  } catch (error) {
-    console.error("Error during Google login:", error);
-    res.status(500).send("Server error during Google login");
-  }
-});
-
-
-// Endpoint untuk registrasi
-app.post("/register", async (req, res) => {
-  const { username, email, password } = req.body; // Ambil username, email, dan password dari request body
-  let role;
-
-  // Tentukan role berdasarkan domain email
-  if (email.endsWith("@admindramaku.com")) {
-    role = "Admin";
-  } else if (email.endsWith("@gmail.com")) {
-    role = "Writer"; // Atau "Reader" 
-  } else {
-    return res.status(400).json({ message: "Invalid email domain" }); // Email tidak valid
-  }
-
-  try {
-    // Cek apakah username sudah ada
-    const existingUser = await pool.query(
-      "SELECT * FROM users WHERE username = $1",
-      [username]
-    );
-
-    if (existingUser.rows.length > 0) {
-      return res.status(400).json({ message: "Username already exists" });
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Simpan pengguna baru ke database
-    await pool.query(
-      "INSERT INTO users (username, email, password, role_id) VALUES ($1, $2, $3, $4)",
-      [username, email, hashedPassword, role] // Gunakan role yang ditentukan
-    );
-
-    res.status(201).json({ message: "User registered successfully", role });
-  } catch (error) {
-    console.error("Error during registration:", error);
-    res.status(500).send("Server error");
-  }
-});
+// Auth Routes
+app.use('/', authRoutes);
 
 app.get('/movies', async (req, res) => {
   try {
@@ -507,49 +348,9 @@ app.delete('/api/genres/:id', async (req, res) => {
   }
 });
 
-// Get all users
-app.get('/api/users', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM users WHERE banned = false ORDER BY username ASC');
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching countries:', error);
-    res.status(500).json({ error: 'Failed to fetch users' });
-  }
-});
+// User Routes
+app.use('/api/users', userRoutes);
 
-// Ban a user
-app.put('/api/users/:username/ban', async (req, res) => {
-  const { username } = req.params;
-  try {
-    const result = await pool.query('UPDATE users SET banned = true WHERE username = $1 RETURNING *', [username]);
-    if (result.rowCount > 0) {
-      res.status(200).json({ message: 'User banned successfully' });
-    } else {
-      res.status(404).json({ message: 'User not found' });
-    }
-  } catch (error) {
-    console.error('Error banning user:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// change user role
-app.put('/api/users/:username/role', async (req, res) => {
-  const { username } = req.params;
-  const { role } = req.body;
-  try {
-    const result = await pool.query('UPDATE users SET role_id = $1 WHERE username = $2 RETURNING *', [role, username]);
-    if (result.rowCount > 0) {
-      res.status(200).json({ message: 'User role updated successfully' });
-    } else {
-      res.status(404).json({ message: 'User not found' });
-    }
-  } catch (error) {
-    console.error('Error updating user role:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
 
 // Endpoint untuk mendapatkan semua awards
 app.get('/api/awards', async (req, res) => {
@@ -961,6 +762,8 @@ app.delete('/api/watchlist/:username/:movieId', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+app.use(errorMiddleware);
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
