@@ -11,6 +11,8 @@ const cloudinary = require('./config/cloudinary');
 // Route imports
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
+const movieRoutes = require('./routes/movieRoutes');
+const commentRoutes = require('./routes/commentRoutes');
 
 // Middleware imports
 const errorMiddleware = require('./middlewares/errorMiddleware');
@@ -29,158 +31,8 @@ const upload = multer({ storage: multer.memoryStorage() }); // Using memory stor
 // Auth Routes
 app.use('/', authRoutes);
 
-app.get('/movies', async (req, res) => {
-  try {
-    const query = `
-      SELECT m.id, m.title, m.year, m.images, m.synopsis, m.availability, m.country_id,
-            (SELECT string_agg(g.name, ', ') FROM movie_genre mg 
-              JOIN genres g ON g.id = mg.genre_id WHERE mg.movie_id = m.id) as genre,
-            (SELECT avg(c.rate) FROM comments c WHERE c.movie_id = m.id AND c.status = '1') as rating,
-            0 as views,
-            (SELECT string_agg(w.name || ' (' || w.year || ')', ', ') 
-            FROM movie_award md 
-            JOIN awards w ON w.id = md.award_id 
-            WHERE md.movie_id = m.id AND w.year IS NOT NULL) as award
-      FROM movies m
-      ORDER BY m.id ASC;
-    `;
-    const movies = await pool.query(query);
-
-    // Log data to check for duplicates
-    console.log(movies.rows);
-
-    res.json(movies.rows); // Send all movies at once
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error fetching movies' });
-  }
-});
-
-
-app.get('/movies/:id', async (req, res) => {
-  const movieId = parseInt(req.params.id);
-
-  try {
-    const query = `
-      SELECT m.id, m.title, m.year, m.images, m.synopsis, m.trailer, m.alt_title, m.availability, m.country_id,
-             countries.name AS country_name, -- Added country name from countries table
-          (SELECT string_agg(g.name, ', ') 
-            FROM movie_genre mg 
-            JOIN genres g ON g.id = mg.genre_id 
-            WHERE mg.movie_id = m.id) as genres,
-          (SELECT avg(c.rate) 
-            FROM comments c 
-            WHERE c.movie_id = m.id AND c.status = '1') as rating,
-          (SELECT json_agg(json_build_object('user', c.username, 'text', c.comment, 'rating', c.rate, 'date', c.created_at)) 
-            FROM comments c 
-            WHERE c.movie_id = m.id AND c.status = 'true') as comments,
-            (SELECT json_agg(json_build_object('name', a.name, 'url_photos', a.url_photos)) 
-             FROM movie_actor ma
-             JOIN actors a ON a.id = ma.actor_id 
-             WHERE ma.movie_id = m.id) AS actors,
-          (SELECT string_agg(w.name || ' (' || w.year || ')', ', ') 
-            FROM movie_award md 
-            JOIN awards w ON w.id = md.award_id 
-            WHERE md.movie_id = m.id AND w.year IS NOT NULL) as awards
-      FROM movies m
-      LEFT JOIN countries ON m.country_id = countries.id -- Join with countries table
-      WHERE m.id = $1;
-    `;
-
-    const result = await pool.query(query, [movieId]);
-
-    console.log('Result:', result.rows); // Debugging output
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Movie not found' });
-    }
-
-    res.json(result.rows[0]); // Return the movie details as a JSON response
-  } catch (error) {
-    console.error('Error fetching movie details:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-
-
-app.get('/api/search', async (req, res) => {
-  const searchTerm = req.query.term || ''; // Get the 'term' parameter from the query
-  // Define a list of stop words to ignore in the search
-  const stopWords = [
-    'the', 'of', 'a', 'an', 'in', 'and', 'to', 'for', 'is',
-    'at', 'by', 'on', 'with', 'b', 'c', 'd', 'e', 'f', 'g',
-    'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
-    's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'th', 'wi'
-  ];
-  // Filter out stop words from the search term
-  const filteredTerm = searchTerm
-    .toLowerCase()
-    .split(' ')
-    .filter(word => !stopWords.includes(word) && word.trim() !== '')
-    .join(' ');
-  // Check if the filtered term is empty
-  if (!filteredTerm) {
-    return res.json([]); // Return an empty array if no valid search term remains
-  }
-  const formattedSearchTermWithWordBoundary = `\\m${filteredTerm}`; // Match the beginning of a word
-  const formattedSearchTermWithoutLeadingWildcard = `${filteredTerm}%`; // Format for SQL LIKE with trailing wildcard only
-
-  try {
-    // Query untuk mencari berdasarkan judul dan aktor
-    // SQL query to search based on title and actor's name using regex for precise title matching
-    const query = `
-      SELECT DISTINCT m.id, m.title, m.year, m.images, m.synopsis, m.country_id,
-        (SELECT string_agg(g.name, ', ') 
-         FROM movie_genre mg
-         JOIN genres g ON g.id = mg.genre_id
-        //  WHERE mg.movie_id = m.id) AS genre,
-        (SELECT AVG(c.rate)
-         FROM comments c 
-         WHERE c.movie_id = m.id AND c.status = '1') AS rating,
-        (SELECT string_agg(a.name, ', ')
-         FROM movie_actor ma
-         JOIN actors a ON a.id = ma.actor_id 
-         WHERE ma.movie_id = m.id) AS actors
-         FROM movies m
-      LEFT JOIN movie_actor ma ON ma.movie_id = m.id
-      LEFT JOIN actors a ON a.id = ma.actor_id WHERE LOWER(m.title) ~* $1  -- Using PostgreSQL regex matching for precise title search
-        OR LOWER(REGEXP_REPLACE(a.name, '[ -]', '', 'g')) LIKE $2
-      GROUP BY m.id
-      ORDER BY m.id ASC;
-    `;
-
-    const movies = await pool.query(query, [formattedSearchTermWithWordBoundary, formattedSearchTermWithoutLeadingWildcard]);
-
-    res.json(movies.rows);
-  } catch (error) {
-    console.error('Error fetching search results:', error);
-    res.status(500).json({ message: 'Error fetching search results' });
-  }
-});
-
-app.get('/suggestions', async (req, res) => {
-  const searchTerm = req.query.term || '';
-  const formattedSearchTerm = `${searchTerm.toLowerCase()}%`; // For SQL LIKE
-
-  console.log('Formatted Search Term:', formattedSearchTerm); // Log the search term
-
-  try {
-    const query = `
-      SELECT title FROM movies
-      WHERE LOWER(title) LIKE $1
-      ORDER BY title ASC
-      LIMIT 10; 
-    `;
-
-    const result = await pool.query(query, [formattedSearchTerm]);
-    const titles = result.rows.map(row => row.title);
-    res.json(titles); // Return the array of titles
-  } catch (error) {
-    console.error('Error fetching suggestions:', error);
-    res.status(500).json({ message: 'Error fetching suggestions', error: error.message }); // Include error details
-  }
-});
+// Movie Routes
+app.use('/', movieRoutes);
 
 
 app.get('/api/genres', async (req, res) => {
@@ -210,28 +62,7 @@ app.get('/api/genres', async (req, res) => {
 //   }
 // });
 
-app.post('/movies/:id/comments', authenticateToken, async (req, res) => {
-  const movieId = parseInt(req.params.id);
-  const { commentText, rating, status } = req.body; // Ambil status dari request body
-  const userName = req.user.username; // Ambil username dari token yang terautentikasi
 
-  if (!commentText || !rating) {
-    return res.status(400).json({ message: "Comment text and rating are required." });
-  }
-
-  try {
-    // Insert komentar ke database
-    await pool.query(
-      "INSERT INTO comments (movie_id, username, comment, rate, status) VALUES ($1, $2, $3, $4, $5)", // Ubah query untuk menggunakan $5 untuk status
-      [movieId, userName, commentText, rating, status] // Tambahkan status di akhir array
-    );
-
-    res.status(201).json({ message: "Comment added successfully." });
-  } catch (error) {
-    console.error("Error adding comment:", error);
-    res.status(500).json({ message: "Server error while adding comment." });
-  }
-});
 
 
 
@@ -551,69 +382,11 @@ app.delete('/actors/:id', async (req, res) => {
   }
 });
 
-// Updated GET endpoint to fetch comments with movie titles
-app.get("/comments", async (req, res) => {
-  try {
-    const { searchTerm = "", shows = 10 } = req.query;
-    const result = await pool.query(
-      `SELECT comments.id, comments.comment, comments.status, comments.rate, 
-              comments.username, comments.created_at, movies.title AS drama 
-       FROM comments 
-       JOIN movies ON comments.movie_id = movies.id 
-       WHERE comments.username ILIKE $1 
-       LIMIT $2`,
-      [`%${searchTerm}%`, shows]
-    );
-    res.json(result.rows);
-  } catch (error) {
-    console.error("Error fetching comments:", error);
-    res.status(500).send("Server error");
-  }
-});
+// Comment Routes
+app.use('/', commentRoutes);
 
 
-// Add a new comment
-app.post("/comments", async (req, res) => {
-  const { username, rate, drama, comments, status } = req.body;
-  try {
-    const result = await pool.query(
-      "INSERT INTO comments (username, rate, drama, comments, status) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-      [username, rate, drama, comments, status]
-    );
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error("Error adding comment:", error);
-    res.status(500).send("Server error");
-  }
-});
 
-app.put("/comments/:id", async (req, res) => {
-  const { id } = req.params; // This should be a string
-  const { status } = req.body; // Make sure to only take status
-  try {
-    const result = await pool.query(
-      "UPDATE comments SET status = $1 WHERE id = $2 RETURNING *",
-      [status, id]
-    );
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error("Error updating comment:", error.message); // Log detailed error
-    res.status(500).send("Server error");
-  }
-});
-
-
-// Delete comments
-app.delete("/comments", async (req, res) => {
-  const { ids } = req.body; // Expecting an array of IDs
-  try {
-    await pool.query("DELETE FROM comments WHERE id = ANY($1)", [ids]);
-    res.sendStatus(200);
-  } catch (error) {
-    console.error("Error deleting comments:", error);
-    res.status(500).send("Server error");
-  }
-});
 
 // Add a new movie
 app.post('/api/movies', upload.single('photo'), async (req, res) => {
