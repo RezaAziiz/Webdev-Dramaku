@@ -3,10 +3,24 @@ import { useNavigate } from "react-router-dom";
 import useFeaturedMovies from "../hooks/useFeaturedMovies";
 
 const AUTO_SLIDE_INTERVAL_MS = 15000;
-const DEFAULT_TINT = "#0d9488";
-const DEFAULT_BG = "#0a1428";
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const readDefaultPalette = () => {
+  if (typeof window === "undefined") {
+    return { tint: "", accent: "", bg: "" };
+  }
+
+  const styles = window.getComputedStyle(document.documentElement);
+  const readToken = (token) => styles.getPropertyValue(token).trim();
+
+  return {
+    tint: readToken("--tint"),
+    accent: readToken("--accent"),
+    bg: readToken("--bg-base"),
+    contrastText: readToken("--text-primary"),
+  };
+};
 
 const rgbToHex = ({ r, g, b }) =>
   `#${[r, g, b]
@@ -37,6 +51,48 @@ const mixHex = (baseHex, mixHexValue, amount) => {
   return rgbToHex(blend);
 };
 
+const relativeLuminance = (hex) => {
+  const channels = Object.values(hexToRgb(hex)).map((channel) => {
+    const normalized = channel / 255;
+    return normalized <= 0.04045
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4;
+  });
+
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+};
+
+const contrastRatio = (firstHex, secondHex) => {
+  const first = relativeLuminance(firstHex);
+  const second = relativeLuminance(secondHex);
+  return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+};
+
+const darkenToLuminanceCap = (hex) => {
+  let darkened = hexToRgb(hex);
+
+  while (relativeLuminance(rgbToHex(darkened)) > 0.025) {
+    darkened = {
+      r: darkened.r * 0.8,
+      g: darkened.g * 0.8,
+      b: darkened.b * 0.8,
+    };
+  }
+
+  return rgbToHex(darkened);
+};
+
+const ensureAccentContrast = (accent, background, lightText) => {
+  let adjusted = accent;
+
+  for (let step = 0; step <= 10; step += 1) {
+    if (contrastRatio(adjusted, background) >= 4.5) return adjusted;
+    adjusted = mixHex(adjusted, lightText, 0.1);
+  }
+
+  return adjusted;
+};
+
 const toRgba = (hex, alpha) => {
   const { r, g, b } = hexToRgb(hex);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
@@ -45,10 +101,11 @@ const toRgba = (hex, alpha) => {
 const computePaletteFromImage = (imageUrl) =>
   new Promise((resolve) => {
     if (!imageUrl || typeof window === "undefined") {
-      resolve({ tint: DEFAULT_TINT, accent: DEFAULT_TINT, bg: DEFAULT_BG });
+      resolve(readDefaultPalette());
       return;
     }
 
+    const defaultPalette = readDefaultPalette();
     const image = new Image();
     image.crossOrigin = "anonymous";
     image.onload = () => {
@@ -56,16 +113,21 @@ const computePaletteFromImage = (imageUrl) =>
       const context = canvas.getContext("2d");
 
       if (!context) {
-        resolve({ tint: DEFAULT_TINT, accent: DEFAULT_TINT, bg: DEFAULT_BG });
+        resolve(defaultPalette);
         return;
       }
 
       const sampleSize = 48;
       canvas.width = sampleSize;
       canvas.height = sampleSize;
-      context.drawImage(image, 0, 0, sampleSize, sampleSize);
-
-      const { data } = context.getImageData(0, 0, sampleSize, sampleSize);
+      let data;
+      try {
+        context.drawImage(image, 0, 0, sampleSize, sampleSize);
+        data = context.getImageData(0, 0, sampleSize, sampleSize).data;
+      } catch {
+        resolve(defaultPalette);
+        return;
+      }
       let totalRed = 0;
       let totalGreen = 0;
       let totalBlue = 0;
@@ -82,7 +144,7 @@ const computePaletteFromImage = (imageUrl) =>
       }
 
       if (!pixelCount) {
-        resolve({ tint: DEFAULT_TINT, accent: DEFAULT_TINT, bg: DEFAULT_BG });
+        resolve(defaultPalette);
         return;
       }
 
@@ -92,28 +154,27 @@ const computePaletteFromImage = (imageUrl) =>
         b: totalBlue / pixelCount,
       };
 
-      const tint = rgbToHex({
+      const tint = darkenToLuminanceCap(rgbToHex({
         r: average.r * 0.45,
         g: average.g * 0.45,
         b: average.b * 0.45,
-      });
+      }));
 
-      const accent = rgbToHex({
+      const bg = mixHex(defaultPalette.bg, tint, 0.7);
+      const accent = ensureAccentContrast(rgbToHex({
         r: clamp(average.r * 1.2, 0, 255),
         g: clamp(average.g * 1.2, 0, 255),
         b: clamp(average.b * 1.2, 0, 255),
-      });
+      }), bg, defaultPalette.contrastText);
 
       resolve({
         tint,
         accent,
-        bg: mixHex(DEFAULT_BG, tint, 0.7),
+        bg,
       });
     };
 
-    image.onerror = () => {
-      resolve({ tint: DEFAULT_TINT, accent: DEFAULT_TINT, bg: DEFAULT_BG });
-    };
+    image.onerror = () => resolve(defaultPalette);
 
     image.src = imageUrl;
   });
@@ -199,11 +260,13 @@ const Slider = () => {
       const palette = await computePaletteFromImage(activeMovie.images);
       if (cancelled) return;
 
-      const root = document.documentElement;
-      root.style.setProperty("--tint", palette.tint);
-      root.style.setProperty("--bg-base", palette.bg);
-      root.style.setProperty("--accent", palette.accent);
-      root.style.setProperty("--accent-soft", toRgba(palette.accent, 0.18));
+      const appRoot = document.querySelector(".app-shell");
+      if (!appRoot) return;
+
+      appRoot.style.setProperty("--tint", palette.tint);
+      appRoot.style.setProperty("--bg-base", palette.bg);
+      appRoot.style.setProperty("--accent", palette.accent);
+      appRoot.style.setProperty("--accent-soft", toRgba(palette.accent, 0.18));
     };
 
     applyPalette();
