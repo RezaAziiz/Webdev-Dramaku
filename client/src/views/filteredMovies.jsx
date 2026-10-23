@@ -5,7 +5,7 @@ import CardMovie from '../components/cardMovie';
 const FilteredMovies = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { filteredMovies } = location.state; // Retrieve filtered movies and filter from state
+  const filteredMovies = location.state?.filteredMovies ?? [];
 
   return (
     <div>

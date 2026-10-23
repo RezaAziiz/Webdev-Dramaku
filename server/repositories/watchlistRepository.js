@@ -1,41 +1,40 @@
 const pool = require('../config/db');
 
-exports.checkWatchlist = async (username, movieId) => {
+exports.checkWatchlist = async (userId, tmdbId, mediaType) => {
   const result = await pool.query(
-    'SELECT * FROM user_watchlist WHERE username = $1 AND movie_id = $2',
-    [username, movieId]
+    'SELECT 1 FROM user_watchlist WHERE user_id = $1 AND tmdb_id = $2 AND media_type = $3',
+    [userId, tmdbId, mediaType]
   );
   return result.rows.length > 0;
 };
 
-exports.addWatchlist = async (username, movieId) => {
-  await pool.query(
-    'INSERT INTO user_watchlist (username, movie_id) VALUES ($1, $2)',
-    [username, movieId]
+exports.addWatchlist = async (userId, tmdbId, mediaType) => {
+  const result = await pool.query(
+    `INSERT INTO user_watchlist (user_id, tmdb_id, media_type)
+     VALUES ($1, $2, $3) RETURNING *`,
+    [userId, tmdbId, mediaType]
   );
-  return true;
+  return result.rows[0];
 };
 
-exports.getWatchlist = async (username) => {
+// Note: titles/posters/ratings are no longer stored locally. This only
+// returns the identifiers; the caller is expected to hydrate them via the
+// TMDB proxy endpoints using tmdb_id + media_type.
+exports.getWatchlist = async (userId) => {
   const result = await pool.query(
-    `SELECT m.id, m.title, m.year, m.images, 
-            COALESCE(AVG(c.rate), 0) AS rating,
-            MAX(uw.added_at) AS added_at 
-     FROM movies m
-     JOIN user_watchlist uw ON m.id = uw.movie_id
-     LEFT JOIN comments c ON m.id = c.movie_id
-     WHERE uw.username = $1
-     GROUP BY m.id
+    `SELECT tmdb_id, media_type, added_at
+     FROM user_watchlist
+     WHERE user_id = $1
      ORDER BY added_at DESC`,
-    [username]
+    [userId]
   );
   return result.rows;
 };
 
-exports.removeWatchlist = async (username, movieId) => {
+exports.removeWatchlist = async (userId, tmdbId, mediaType) => {
   const result = await pool.query(
-    'DELETE FROM user_watchlist WHERE username = $1 AND movie_id = $2',
-    [username, movieId]
+    'DELETE FROM user_watchlist WHERE user_id = $1 AND tmdb_id = $2 AND media_type = $3',
+    [userId, tmdbId, mediaType]
   );
   return result.rowCount > 0;
 };

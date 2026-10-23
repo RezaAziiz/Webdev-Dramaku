@@ -2,19 +2,18 @@ const catchAsync = require('../utils/catchAsync');
 const watchlistService = require('../services/watchlistService');
 
 exports.addWatchlist = catchAsync(async (req, res, next) => {
-  const { username, movieId } = req.body;
-  await watchlistService.addWatchlist(username, movieId);
-  res.status(201).json({ message: 'Movie added to watchlist' });
+  const { tmdbId, mediaType } = req.body;
+  const entry = await watchlistService.addWatchlist(req.user.id, tmdbId, mediaType);
+  res.status(201).json(entry);
 });
 
 exports.getWatchlist = catchAsync(async (req, res, next) => {
-  const { username } = req.params;
-  const watchlist = await watchlistService.getWatchlist(username);
+  const watchlist = await watchlistService.getWatchlist(req.user.id);
   res.status(200).json(watchlist);
 });
 
 exports.removeWatchlist = catchAsync(async (req, res, next) => {
-  const { username, movieId } = req.params;
-  await watchlistService.removeWatchlist(username, movieId);
-  res.status(200).json({ message: 'Movie removed from watchlist' });
+  const { mediaType, tmdbId } = req.params;
+  await watchlistService.removeWatchlist(req.user.id, parseInt(tmdbId), mediaType);
+  res.status(200).json({ message: 'Removed from watchlist' });
 });

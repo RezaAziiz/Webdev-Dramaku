@@ -15,4 +15,5 @@ module.exports = {
   JWT_SECRET: requireEnv('JWT_SECRET'),
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '1h',
   GOOGLE_CLIENT_ID: requireEnv('GOOGLE_CLIENT_ID'),
+  TMDB_READ_ACCESS_TOKEN: requireEnv('TMDB_READ_ACCESS_TOKEN'),
 };

@@ -20,3 +20,11 @@ exports.updateRole = async (username, role) => {
   }
   return { message: 'User role updated successfully' };
 };
+
+exports.updateAvatar = async (username, avatarUrl) => {
+  const user = await userRepository.updateAvatar(username, avatarUrl);
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+  return { message: 'Avatar updated successfully', avatar_url: user.avatar_url };
+};

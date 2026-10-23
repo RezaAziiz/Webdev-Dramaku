@@ -1,40 +1,24 @@
 const pool = require('../config/db');
 
-exports.addCommentToMovie = async (movieId, username, commentText, rating, status) => {
+exports.addComment = async (userId, tmdbId, mediaType, commentText, rate) => {
   const result = await pool.query(
-    "INSERT INTO comments (movie_id, username, comment, rate, status) VALUES ($1, $2, $3, $4, $5)",
-    [movieId, username, commentText, rating, status]
+    `INSERT INTO comments (user_id, tmdb_id, media_type, comment, rate)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [userId, tmdbId, mediaType, commentText, rate]
   );
-  return result;
+  return result.rows[0];
 };
 
-exports.getComments = async (searchTerm, shows) => {
+exports.getCommentsForTitle = async (tmdbId, mediaType) => {
   const result = await pool.query(
-    `SELECT comments.id, comments.comment, comments.status, comments.rate, 
-            comments.username, comments.created_at, movies.title AS drama 
-     FROM comments 
-     JOIN movies ON comments.movie_id = movies.id 
-     WHERE comments.username ILIKE $1 
-     LIMIT $2`,
-    [`%${searchTerm}%`, shows]
+    `SELECT c.id, c.comment, c.rate, c.created_at, u.username, u.avatar_url
+     FROM comments c
+     JOIN users u ON u.id = c.user_id
+     WHERE c.tmdb_id = $1 AND c.media_type = $2
+     ORDER BY c.created_at DESC`,
+    [tmdbId, mediaType]
   );
   return result.rows;
-};
-
-exports.addGeneralComment = async (username, rate, drama, comments, status) => {
-  const result = await pool.query(
-    "INSERT INTO comments (username, rate, drama, comments, status) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-    [username, rate, drama, comments, status]
-  );
-  return result.rows[0];
-};
-
-exports.updateCommentStatus = async (id, status) => {
-  const result = await pool.query(
-    "UPDATE comments SET status = $1 WHERE id = $2 RETURNING *",
-    [status, id]
-  );
-  return result.rows[0];
 };
 
 exports.deleteComments = async (ids) => {

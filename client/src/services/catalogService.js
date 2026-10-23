@@ -1,6 +1,6 @@
 import { httpClient } from "./httpClient";
 
-export const getGenres = () => httpClient.get("/api/genres");
+export const getGenres = (options) => httpClient.get("/api/genres", options);
 
 export const getCountries = () => httpClient.get("/api/countries");
 

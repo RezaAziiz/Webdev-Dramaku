@@ -1,28 +1,25 @@
 const commentRepository = require('../repositories/commentRepository');
 const AppError = require('../utils/AppError');
 
-exports.addCommentToMovie = async (movieId, username, commentText, rating, status) => {
-  if (!commentText || !rating) {
+const VALID_MEDIA_TYPES = ['movie', 'tv'];
+
+const assertValidMediaType = (mediaType) => {
+  if (!VALID_MEDIA_TYPES.includes(mediaType)) {
+    throw new AppError("media_type must be 'movie' or 'tv'", 400);
+  }
+};
+
+exports.addComment = async (userId, tmdbId, mediaType, commentText, rate) => {
+  assertValidMediaType(mediaType);
+  if (!commentText || !rate) {
     throw new AppError("Comment text and rating are required.", 400);
   }
-  await commentRepository.addCommentToMovie(movieId, username, commentText, rating, status);
-  return { message: "Comment added successfully." };
+  return await commentRepository.addComment(userId, tmdbId, mediaType, commentText, rate);
 };
 
-exports.getComments = async (searchTerm = "", shows = 10) => {
-  return await commentRepository.getComments(searchTerm, shows);
-};
-
-exports.addGeneralComment = async (username, rate, drama, comments, status) => {
-  return await commentRepository.addGeneralComment(username, rate, drama, comments, status);
-};
-
-exports.updateCommentStatus = async (id, status) => {
-  const comment = await commentRepository.updateCommentStatus(id, status);
-  if (!comment) {
-    throw new AppError("Comment not found", 404);
-  }
-  return comment;
+exports.getCommentsForTitle = async (tmdbId, mediaType) => {
+  assertValidMediaType(mediaType);
+  return await commentRepository.getCommentsForTitle(tmdbId, mediaType);
 };
 
 exports.deleteComments = async (ids) => {

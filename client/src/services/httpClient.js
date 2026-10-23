@@ -40,11 +40,12 @@ const parseResponse = async (response) => {
 
 const request = async (
   path,
-  { method = "GET", body, token, isFormData = false } = {},
+  { method = "GET", body, token, isFormData = false, signal } = {},
 ) => {
   const response = await fetch(apiUrl(path), {
     method,
     headers: buildHeaders(token, body !== undefined, isFormData),
+    signal,
     body:
       body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
   });

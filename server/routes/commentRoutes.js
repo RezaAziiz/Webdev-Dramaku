@@ -4,10 +4,8 @@ const { authenticateToken } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 
-router.post('/movies/:id/comments', authenticateToken, commentController.addCommentToMovie);
-router.get('/comments', commentController.getComments);
-router.post('/comments', commentController.addGeneralComment);
-router.put('/comments/:id', commentController.updateCommentStatus);
-router.delete('/comments', commentController.deleteComments);
+router.post('/api/comments', authenticateToken, commentController.addComment);
+router.get('/api/comments/:mediaType/:tmdbId', commentController.getCommentsForTitle);
+router.delete('/api/comments', authenticateToken, commentController.deleteComments);
 
 module.exports = router;

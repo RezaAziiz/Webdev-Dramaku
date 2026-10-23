@@ -26,12 +26,12 @@ exports.login = async (username, password) => {
   }
 
   const token = jwt.sign(
-    { username: user.username, role: user.role_id, banned: user.banned },
+    { id: user.id, username: user.username, role: user.role, banned: user.banned },
     env.JWT_SECRET,
     { expiresIn: env.JWT_EXPIRES_IN }
   );
 
-  return { token, role: user.role_id, banned: user.banned };
+  return { token, role: user.role, banned: user.banned };
 };
 
 exports.register = async (username, email, password) => {
@@ -74,10 +74,10 @@ exports.googleLogin = async (googleToken) => {
   }
 
   const jwtToken = jwt.sign(
-    { username: user.username, role: user.role_id },
+    { id: user.id, username: user.username, role: user.role },
     env.JWT_SECRET,
     { expiresIn: env.JWT_EXPIRES_IN }
   );
 
-  return { token: jwtToken, role: user.role_id };
+  return { token: jwtToken, role: user.role };
 };
