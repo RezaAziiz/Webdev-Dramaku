@@ -18,6 +18,20 @@ exports.getAllMovies = async () => {
   return result.rows;
 };
 
+exports.getFeaturedMovies = async () => {
+  const query = `
+    SELECT m.id, m.title, m.year, m.images, m.synopsis,
+          (SELECT string_agg(g.name, ', ') FROM movie_genre mg 
+            JOIN genres g ON g.id = mg.genre_id WHERE mg.movie_id = m.id) as genre,
+          (SELECT avg(c.rate) FROM comments c WHERE c.movie_id = m.id AND c.status = '1') as rating
+    FROM movies m
+    WHERE m.is_featured = true
+    ORDER BY m.id ASC;
+  `;
+  const result = await pool.query(query);
+  return result.rows;
+};
+
 exports.getMovieById = async (movieId) => {
   const query = `
     SELECT m.id, m.title, m.year, m.images, m.synopsis, m.trailer, m.alt_title, m.availability, m.country_id,

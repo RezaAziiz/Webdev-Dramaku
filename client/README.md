@@ -2,6 +2,17 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Environment
+
+Set frontend configuration in `client/.env.local` when using a non-default API or Google OAuth client:
+
+```env
+REACT_APP_API_URL=https://webdev-dramaku-production.up.railway.app
+REACT_APP_GOOGLE_CLIENT_ID=your-google-client-id
+```
+
+The API URL and Google client ID currently have production defaults. Restart the development server after changing environment values.
+
 ## Available Scripts
 
 In the project directory, you can run:

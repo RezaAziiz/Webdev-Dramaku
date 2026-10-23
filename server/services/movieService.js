@@ -5,6 +5,10 @@ exports.getAllMovies = async () => {
   return await movieRepository.getAllMovies();
 };
 
+exports.getFeaturedMovies = async () => {
+  return await movieRepository.getFeaturedMovies();
+};
+
 exports.getMovieById = async (id) => {
   const movie = await movieRepository.getMovieById(id);
   if (!movie) {

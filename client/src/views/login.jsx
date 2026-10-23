@@ -1,22 +1,17 @@
-import React, { useState, useEffect } from "react";
-import logo from '../assets/logo.png';
-import axios from 'axios';
-import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
-
-const ClientId = "193966095713-ooq3r03aaanmf67tudroa67ccctfqvk6.apps.googleusercontent.com";
+import React, { useState } from "react";
+import logo from "../assets/logo.png";
+import axios from "axios";
+import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { GOOGLE_CLIENT_ID, apiUrl } from "../config/api";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // eslint-disable-line no-unused-vars
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      setIsAuthenticated(true);
-    }
-  }, []);
+  const { login, logout } = useAuth();
+  const navigate = useNavigate();
 
   // Validate username can either be email or standard username
   const validateInput = (input) => {
@@ -28,66 +23,63 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
-  
+
     // Input validation
     if (!validateInput(username)) {
-      setError("Please enter a valid email or username (at least 3 characters).");
+      setError(
+        "Please enter a valid email or username (at least 3 characters).",
+      );
       return;
     }
-  
+
     if (!password || password.length < 6) {
       setError("Password must be at least 6 characters long.");
       return;
     }
-  
+
     try {
-      const response = await axios.post("https://webdev-dramaku-production.up.railway.app/login", {
+      const response = await axios.post(apiUrl("/login"), {
         username,
         password,
       });
-  
+
       // Check for banned status in the response
       if (response.data.banned) {
         setError("Your account has been banned. Please contact support.");
-        localStorage.removeItem("token"); // Remove token if set
+        logout();
         return; // Prevent further execution
       }
-  
-      localStorage.setItem("token", response.data.token);
-      setIsAuthenticated(true);
-  
-      // Redirect based on role
-      if (response.data.role === "Admin") {
-        window.location.href = "/";
-      } else {
-        window.location.href = "/";
+
+      if (!login(response.data.token)) {
+        setError("Login returned an invalid session. Please try again.");
+        return;
       }
+      navigate("/", { replace: true });
     } catch (error) {
-      if (error.response && error.response.status === 403) {
+      if (error.response?.status === 403) {
         setError("Your account has been banned. Please contact support.");
       } else {
-        localStorage.removeItem("token");
         setError("Login failed. Please check your credentials.");
       }
     }
-  };  
-
+  };
 
   const handleGoogleLoginSuccess = async (credentialResponse) => {
     try {
       const token = credentialResponse.credential;
-      const response = await axios.post("https://webdev-dramaku-production.up.railway.app/google-login", { token });
+      const response = await axios.post(apiUrl("/google-login"), { token });
 
-      localStorage.setItem("token", response.data.token);
-      setIsAuthenticated(true);
-
-      if (response.data.role === "Admin") {
-        window.location.href = "/";
-      } else {
-        window.location.href = "/";
+      if (!login(response.data.token)) {
+        setError("Login returned an invalid session. Please try again.");
+        return;
       }
+      navigate("/", { replace: true });
     } catch (error) {
-      setError("Your account has been banned");
+      setError(
+        error.response?.status === 403
+          ? "Your account has been banned."
+          : "Google sign-in failed. Please try again.",
+      );
     }
   };
 
@@ -96,7 +88,7 @@ export default function Login() {
   };
 
   return (
-    <GoogleOAuthProvider clientId={ClientId}>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <div className="bg-gray-900 text-white min-h-screen flex flex-col justify-center items-center">
         <div className="flex flex-col justify-center items-center space-y-4">
           <img src={logo} className="w-40 h-10" alt="Logo" />

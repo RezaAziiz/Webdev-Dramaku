@@ -1,18 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import Cms from '../components/cms';
+import React, { useState, useEffect } from "react";
+import Cms from "../components/cms";
+import { apiUrl } from "../config/api";
 
 const ITEMS_PER_PAGE = 8;
 
 const CmsAwards = () => {
   const [formData, setFormData] = useState({
-    country_id: '',
-    name: '',
-    year: '',
+    country_id: "",
+    name: "",
+    year: "",
   });
   const [awardsData, setAwardsData] = useState([]);
   const [countries, setCountries] = useState([]);
-  const [sortField, setSortField] = useState('name'); // Default sorting field
-  const [sortOrder, setSortOrder] = useState('asc'); // Default sorting order
+  const [sortField, setSortField] = useState("name"); // Default sorting field
+  const [sortOrder, setSortOrder] = useState("asc"); // Default sorting order
   const [awards, setAwards] = useState([]);
   const [editId, setEditId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -26,21 +27,21 @@ const CmsAwards = () => {
 
   const fetchCountries = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/countries');
+      const response = await fetch(apiUrl("/api/countries"));
       const data = await response.json();
       setCountries(data);
     } catch (error) {
-      console.error('Error fetching countries:', error);
+      console.error("Error fetching countries:", error);
     }
   };
 
   const fetchAwards = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/awards');
+      const response = await fetch(apiUrl("/api/awards"));
       const data = await response.json();
       setAwardsData(data);
     } catch (error) {
-      console.error('Error fetching awards:', error);
+      console.error("Error fetching awards:", error);
     }
   };
 
@@ -68,16 +69,16 @@ const CmsAwards = () => {
 
   const handleSaveClick = async () => {
     try {
-      await fetch(`https://webdev-dramaku-production.up.railway.app/awards/${editId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+      await fetch(apiUrl(`/awards/${editId}`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editedAward),
       });
       setEditId(null); // Exit edit mode
       setEditedAward(null); // Clear edited award data
       fetchAwards(); // Refresh awards data
     } catch (error) {
-      console.error('Error updating award:', error);
+      console.error("Error updating award:", error);
     }
   };
 
@@ -91,21 +92,21 @@ const CmsAwards = () => {
   const handleSubmit = async (e) => {
     e.preventDefault(); // Prevent the default form submission behavior
 
-     // Ensure formData has the expected structure
-  const formattedData = {
-    country_id: parseInt(formData.country_id, 10), // Convert to number if needed
-    name: formData.name.trim(), // Trim any whitespace
-    year: parseInt(formData.year, 10), // Convert to number if needed
-  };
+    // Ensure formData has the expected structure
+    const formattedData = {
+      country_id: parseInt(formData.country_id, 10), // Convert to number if needed
+      name: formData.name.trim(), // Trim any whitespace
+      year: parseInt(formData.year, 10), // Convert to number if needed
+    };
 
-  console.log("Submitting award:", JSON.stringify(formattedData));
+    console.log("Submitting award:", JSON.stringify(formattedData));
 
     try {
       // Send a POST request to the awards API
-      const response = await fetch("https://webdev-dramaku-production.up.railway.app/awards", {
+      const response = await fetch(apiUrl("/awards"), {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData), // Make sure formData has the correct structure
       });
@@ -114,7 +115,7 @@ const CmsAwards = () => {
       if (response.ok) {
         console.log("Award created successfully");
         fetchAwards(); // Refresh the awards data
-        setFormData({ country_id: '', name: '', year: '' }); // Reset form data after submission
+        setFormData({ country_id: "", name: "", year: "" }); // Reset form data after submission
       } else {
         const errorText = await response.text(); // Get the response text for debugging
         console.error("Error creating award:", errorText);
@@ -124,53 +125,54 @@ const CmsAwards = () => {
     }
   };
 
-  const filteredAwards = awardsData.filter(award =>
-    award.name.toLowerCase().startsWith(searchQuery.toLowerCase())
+  const filteredAwards = awardsData.filter((award) =>
+    award.name.toLowerCase().startsWith(searchQuery.toLowerCase()),
   );
 
   const handleSort = (field) => {
     const sortedAwards = [...awardsData];
 
-    if (sortField === field && sortOrder === 'asc') {
+    if (sortField === field && sortOrder === "asc") {
       // If already sorted by this field in ascending order, sort in descending order
       sortedAwards.sort((a, b) => {
-        if (field === 'year') {
+        if (field === "year") {
           return b.year - a.year; // For numeric sorting
         }
         return b.name.localeCompare(a.name); // For string sorting
       });
-      setSortOrder('desc');
+      setSortOrder("desc");
     } else {
       // Sort in ascending order
       sortedAwards.sort((a, b) => {
-        if (field === 'year') {
+        if (field === "year") {
           return a.year - b.year; // For numeric sorting
         }
         return a.name.localeCompare(b.name); // For string sorting
       });
-      setSortOrder('asc');
+      setSortOrder("asc");
     }
 
     setAwardsData(sortedAwards);
     setSortField(field); // Update the current sorting field
   };
 
-
   const handleDelete = async (id) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this award?");
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this award?",
+    );
     if (confirmDelete) {
       try {
-        const response = await fetch(`https://webdev-dramaku-production.up.railway.app/awards/${id}`, {
-          method: 'DELETE',
+        const response = await fetch(apiUrl(`/awards/${id}`), {
+          method: "DELETE",
         });
 
         if (response.ok) {
           fetchAwards(); // Refresh the awards after deletion
         } else {
-          console.error('Failed to delete award');
+          console.error("Failed to delete award");
         }
       } catch (error) {
-        console.error('Error:', error);
+        console.error("Error:", error);
       }
     }
   };
@@ -178,13 +180,15 @@ const CmsAwards = () => {
   // Adjust pagination logic based on filteredAwards
   const totalPages = Math.ceil(filteredAwards.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const currentAwards = filteredAwards.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const currentAwards = filteredAwards.slice(
+    startIndex,
+    startIndex + ITEMS_PER_PAGE,
+  );
 
   return (
     <Cms activePage="awards">
       {/* Main Container for Form and Table */}
       <div className="w-full p-4 mb-5 max-w-full mx-auto">
-
         {/* Award Form and Search Bar */}
         <div className="flex justify-between items-center mb-7">
           {/* New Award Input Section */}
@@ -193,8 +197,12 @@ const CmsAwards = () => {
               <tbody>
                 {/* Row 1: Country, Year, and Submit Button */}
                 <tr>
-                  <td colSpan="3"> {/* Award Name spans columns 1-3 */}
-                    <label className="text-white font-bold" htmlFor="name">Award Name:</label>
+                  <td colSpan="3">
+                    {" "}
+                    {/* Award Name spans columns 1-3 */}
+                    <label className="text-white font-bold" htmlFor="name">
+                      Award Name:
+                    </label>
                     <input
                       id="name"
                       type="text"
@@ -210,7 +218,12 @@ const CmsAwards = () => {
                 {/* Row Award Name and Search Bar */}
                 <tr>
                   <td className="pr-2 pt-3">
-                    <label className="text-white font-bold mb-1" htmlFor="country">Country: </label>
+                    <label
+                      className="text-white font-bold mb-1"
+                      htmlFor="country"
+                    >
+                      Country:{" "}
+                    </label>
                     <select
                       id="country"
                       name="country_id"
@@ -227,7 +240,9 @@ const CmsAwards = () => {
                     </select>
                   </td>
                   <td className="pl-2 pt-3">
-                    <label className="text-white font-bold mb-1" htmlFor="year">Year: </label>
+                    <label className="text-white font-bold mb-1" htmlFor="year">
+                      Year:{" "}
+                    </label>
                     <input
                       id="year"
                       type="text"
@@ -239,11 +254,16 @@ const CmsAwards = () => {
                     />
                   </td>
                   <td className="pl-2 pt-3">
-                    <button type="submit" className="p-1 px-2 bg-teal-500 rounded-md text-white hover:bg-teal-600">
+                    <button
+                      type="submit"
+                      className="p-1 px-2 bg-teal-500 rounded-md text-white hover:bg-teal-600"
+                    >
                       Submit
                     </button>
                   </td>
-                  <td className="pl-2 pt-3" colSpan="2"> {/* Search Bar spans columns 4-5 */}
+                  <td className="pl-2 pt-3" colSpan="2">
+                    {" "}
+                    {/* Search Bar spans columns 4-5 */}
                     <input
                       type="text"
                       placeholder="Search award..."
@@ -263,14 +283,22 @@ const CmsAwards = () => {
             <tr>
               <th className="w-1/7 px-4 py-3">ID</th>
               <th className="w-1/7 px-4 py-3">Country</th>
-              <th className="w-1/7 px-4 py-3">Year
-                <button onClick={() => handleSort('year')} className="ml-2 text-xs">
-                  {sortField === 'year' && sortOrder === 'asc' ? '▲' : '▼'}
+              <th className="w-1/7 px-4 py-3">
+                Year
+                <button
+                  onClick={() => handleSort("year")}
+                  className="ml-2 text-xs"
+                >
+                  {sortField === "year" && sortOrder === "asc" ? "▲" : "▼"}
                 </button>
               </th>
-              <th className="w-1/7 px-4 py-3">Award
-                <button onClick={() => handleSort('name')} className="ml-2 text-xs">
-                  {sortField === 'name' && sortOrder === 'asc' ? '▲' : '▼'}
+              <th className="w-1/7 px-4 py-3">
+                Award
+                <button
+                  onClick={() => handleSort("name")}
+                  className="ml-2 text-xs"
+                >
+                  {sortField === "name" && sortOrder === "asc" ? "▲" : "▼"}
                 </button>
               </th>
               <th className="w-1/7 px-4 py-3"></th>
@@ -299,8 +327,10 @@ const CmsAwards = () => {
                         </option>
                       ))}
                     </select>
+                  ) : award.country_name ? (
+                    award.country_name
                   ) : (
-                    award.country_name ? award.country_name : 'Unknown'
+                    "Unknown"
                   )}
                 </td>
                 <td className="w-1/7 py-3 px-4 border-b border-gray-300 text-gray-800">
@@ -316,7 +346,10 @@ const CmsAwards = () => {
                     award.year || "None"
                   )}
                 </td>
-                <td className="w-1/7 py-3 px-4 border-b border-gray-300 text-gray-800 break-words max-w-xs" colSpan="3">
+                <td
+                  className="w-1/7 py-3 px-4 border-b border-gray-300 text-gray-800 break-words max-w-xs"
+                  colSpan="3"
+                >
                   {editId === award.id ? (
                     <input
                       type="text"
@@ -345,7 +378,6 @@ const CmsAwards = () => {
                       >
                         Save
                       </button>
-
                     </>
                   ) : (
                     <>
@@ -374,25 +406,35 @@ const CmsAwards = () => {
           <button
             className="p-2 bg-gray-200 text-black rounded-md hover:bg-gray-100 font-bold"
             onClick={() => setCurrentPage(1)}
-            disabled={currentPage === 1}>{"<<"}
+            disabled={currentPage === 1}
+          >
+            {"<<"}
           </button>
           <button
             className="p-2 bg-gray-200 text-black rounded-md hover:bg-gray-100 font-bold"
-            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}>{"<"}
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            {"<"}
           </button>
           <span className="flex items-center">
             {currentPage} of {totalPages}
           </span>
           <button
             className="p-2 bg-gray-200 text-black rounded-md hover:bg-gray-100 font-bold"
-            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-            disabled={currentPage === totalPages}>{">"}
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+            }
+            disabled={currentPage === totalPages}
+          >
+            {">"}
           </button>
           <button
             className="p-2 bg-gray-200 text-black rounded-md hover:bg-gray-100 font-bold"
             onClick={() => setCurrentPage(totalPages)}
-            disabled={currentPage === totalPages}>{">>"}
+            disabled={currentPage === totalPages}
+          >
+            {">>"}
           </button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Cms from "../components/cms";
+import { apiUrl } from "../config/api";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -10,17 +11,16 @@ const Comments = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectAll, setSelectAll] = useState(false);
   const [checkedItems, setCheckedItems] = useState({});
-  const [commentsData, setCommentsData] = useState([]);  // Initially an empty array
+  const [commentsData, setCommentsData] = useState([]); // Initially an empty array
   const [currentPage, setCurrentPage] = useState(1);
 
   const fetchComments = async () => {
     try {
-      const response = await axios.get("https://webdev-dramaku-production.up.railway.app/comments", {
+      const response = await axios.get(apiUrl("/comments"), {
         params: { searchTerm, shows, page: currentPage },
       });
-  
+
       setCommentsData(response.data); // Set the comments data
-  
     } catch (error) {
       console.error("Error fetching comments:", error);
     }
@@ -41,7 +41,10 @@ const Comments = () => {
   // Pagination calculations based on filtered comments
   const totalPages = Math.ceil(filteredComments.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const currentComments = filteredComments.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const currentComments = filteredComments.slice(
+    startIndex,
+    startIndex + ITEMS_PER_PAGE,
+  );
 
   const renderStars = (rate) => {
     return "★".repeat(rate) + "☆".repeat(5 - rate);
@@ -57,30 +60,33 @@ const Comments = () => {
   const handleApprove = async () => {
     const idsToApprove = currentComments
       .filter((_, index) => checkedItems[index]) // Get the ids of checked comments
-      .map(comment => comment.id);
-  
+      .map((comment) => comment.id);
+
     try {
       // Update status to true (approved) for selected comments
-      await Promise.all(idsToApprove.map(id => 
-        axios.put(`https://webdev-dramaku-production.up.railway.app/comments/${id}`, { status: true })
-      ));
+      await Promise.all(
+        idsToApprove.map((id) =>
+          axios.put(apiUrl(`/comments/${id}`), { status: true }),
+        ),
+      );
       fetchComments(); // Refresh the list of comments after approval
     } catch (error) {
       console.error("Error approving comments:", error);
     }
   };
-  
 
   const handleDelete = async () => {
-    const confirmDelete = window.confirm("Are you sure you want to delete these comments?");
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete these comments?",
+    );
     if (!confirmDelete) return;
 
     const idsToDelete = currentComments
       .filter((_, index) => checkedItems[index])
-      .map(comment => comment.id);
+      .map((comment) => comment.id);
 
     try {
-      await axios.delete("https://webdev-dramaku-production.up.railway.app/comments", { data: { ids: idsToDelete } });
+      await axios.delete(apiUrl("/comments"), { data: { ids: idsToDelete } });
       fetchComments(); // Refresh the comments list
     } catch (error) {
       console.error("Error deleting comments:", error);
@@ -93,7 +99,9 @@ const Comments = () => {
         <main className="flex-1 p-4">
           <div className="flex justify-between mb-4">
             <div className="flex items-center">
-              <label htmlFor="filter" className="mr-2">Filtered by:</label>
+              <label htmlFor="filter" className="mr-2">
+                Filtered by:
+              </label>
               <select
                 id="filter"
                 className="bg-gray-100 text-gray-400 p-2 rounded"
@@ -129,10 +137,12 @@ const Comments = () => {
                     checked={selectAll}
                     onChange={() => {
                       setSelectAll(!selectAll);
-                      setCheckedItems(currentComments.reduce((acc, _, index) => {
-                        acc[index] = !selectAll;
-                        return acc;
-                      }, {}));
+                      setCheckedItems(
+                        currentComments.reduce((acc, _, index) => {
+                          acc[index] = !selectAll;
+                          return acc;
+                        }, {}),
+                      );
                     }}
                   />
                   Select All
@@ -146,7 +156,10 @@ const Comments = () => {
             </thead>
             <tbody>
               {currentComments.map((comment, index) => (
-                <tr key={comment.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-100'}>
+                <tr
+                  key={comment.id}
+                  className={index % 2 === 0 ? "bg-white" : "bg-gray-100"}
+                >
                   <td className="p-3 text-gray-800">
                     <input
                       type="checkbox"
@@ -156,10 +169,14 @@ const Comments = () => {
                     />
                   </td>
                   <td className="p-3 text-gray-800">{comment.username}</td>
-                  <td className="p-3 text-yellow-400">{renderStars(comment.rate)}</td>
+                  <td className="p-3 text-yellow-400">
+                    {renderStars(comment.rate)}
+                  </td>
                   <td className="p-3 text-gray-800">{comment.drama}</td>
                   <td className="p-3 text-gray-800">{comment.comment}</td>
-                  <td className={`p-3 text-${comment.status ? 'green' : 'red'}-500`}>
+                  <td
+                    className={`p-3 text-${comment.status ? "green" : "red"}-500`}
+                  >
                     {comment.status ? "Approved" : "Unapproved"}
                   </td>
                 </tr>
@@ -169,10 +186,16 @@ const Comments = () => {
 
           {/* Actions */}
           <div className="mt-4">
-            <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={handleApprove}>
+            <button
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+              onClick={handleApprove}
+            >
               Approve
             </button>
-            <button className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded ml-2" onClick={handleDelete}>
+            <button
+              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded ml-2"
+              onClick={handleDelete}
+            >
               Delete
             </button>
           </div>
@@ -182,24 +205,35 @@ const Comments = () => {
             <button
               className="p-2 bg-gray-200 text-black rounded-md hover:bg-gray-100 font-bold"
               onClick={() => setCurrentPage(1)}
-              disabled={currentPage === 1}>{"<<"}
+              disabled={currentPage === 1}
+            >
+              {"<<"}
             </button>
             <button
               className="p-2 bg-gray-200 text-black rounded-md hover:bg-gray-100 font-bold"
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}>{"<"}
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              {"<"}
             </button>
             <span className="flex items-center">
               {currentPage} of {totalPages}
             </span>
             <button
               className="p-2 bg-gray-200 text-black rounded-md hover:bg-gray-100 font-bold"
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}>{">"}</button>
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              disabled={currentPage === totalPages}
+            >
+              {">"}
+            </button>
             <button
               className="p-2 bg-gray-200 text-black rounded-md hover:bg-gray-100 font-bold"
               onClick={() => setCurrentPage(totalPages)}
-              disabled={currentPage === totalPages}>{">>"}
+              disabled={currentPage === totalPages}
+            >
+              {">>"}
             </button>
           </div>
         </main>

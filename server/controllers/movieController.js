@@ -6,6 +6,11 @@ exports.getAllMovies = catchAsync(async (req, res, next) => {
   res.json(movies);
 });
 
+exports.getFeaturedMovies = catchAsync(async (req, res, next) => {
+  const movies = await movieService.getFeaturedMovies();
+  res.json(movies);
+});
+
 exports.getMovieById = catchAsync(async (req, res, next) => {
   const movieId = parseInt(req.params.id);
   const movie = await movieService.getMovieById(movieId);

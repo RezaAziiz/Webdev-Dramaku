@@ -1,33 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Divergent from '../assets/divergent.png';
-import Mazerunner from '../assets/mazerunner.png';
-import Harrypotter from '../assets/harrychamber.jpg';
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import useFeaturedMovies from "../hooks/useFeaturedMovies";
+import ResponsiveImage from "./common/ResponsiveImage";
+
+const AUTO_SLIDE_INTERVAL_MS = 5000;
 
 const Slider = () => {
+  const { featuredMovies, loading, error } = useFeaturedMovies();
   const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
 
-  const slides = [
-    { src: Divergent, title: 'Divergent', id: 233 },
-    { src: Mazerunner, title: 'The Maze Runner', id: 230 },
-    { src: Harrypotter, title: 'Harry Potter and The Chamber of Secrets', id: 270 },
-  ];
-
-  const totalSlides = slides.length;
+  const totalSlides = featuredMovies.length;
 
   useEffect(() => {
-    const slider = document.getElementById('slider');
-    if (slider) {
-      slider.style.transform = `translateX(-${currentSlide * 100}%)`;
-    }
-  }, [currentSlide]);
+    if (totalSlides === 0) return undefined;
 
-  // Auto-slide effect every 5 seconds
-  useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prevSlide) => (prevSlide + 1) % totalSlides);
-    }, 5000);
+    }, AUTO_SLIDE_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [totalSlides]);
 
@@ -39,38 +29,46 @@ const Slider = () => {
     setCurrentSlide(index);
   };
 
+  if (loading || error || totalSlides === 0) {
+    return null;
+  }
+
   return (
-    <div className="relative flex justify-center items-center mb-6">
-      {/* Slider Container */}
-      <div className="overflow-hidden w-[560px] h-[315px] flex justify-center relative">
-        <div id="slider" className="flex transition-transform ease-out duration-500">
-          {slides.map((slide, index) => (
-            <div key={index} className="w-full flex-shrink-0 flex justify-center relative">
-              <img
-                src={slide.src}
-                alt={slide.title}
-                className="w-full h-full object-cover rounded-lg shadow-lg transition-transform transform hover:scale-105 duration-300 cursor-pointer"
-                onClick={() => handleSlideClick(slide.id)}
+    <div className="relative flex justify-center items-center w-full mb-6 px-4 sm:px-6">
+      <div className="overflow-hidden w-full max-w-[560px] relative">
+        <div
+          className="flex transition-transform ease-out duration-500"
+          style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+        >
+          {featuredMovies.map((movie) => (
+            <div
+              key={movie.id}
+              className="w-full flex-shrink-0 flex justify-center relative"
+            >
+              <ResponsiveImage
+                src={movie.images}
+                alt={movie.title}
+                aspectRatioClassName="aspect-video"
+                className="rounded-lg shadow-lg transition-transform transform hover:scale-105 duration-300 cursor-pointer"
+                onClick={() => handleSlideClick(movie.id)}
               />
-              {/* Gradient Layer at the Top */}
               <div className="absolute inset-x-0 top-0 h-2/5 bg-gradient-to-b from-black to-transparent transition-opacity duration-300 pointer-events-none" />
-              {/* Title on Top */}
-              <div className="absolute top-2 left-4 text-gray-300 text-lg font-bold transition-opacity duration-300 pointer-events-none">
-                {slide.title}
+              <div className="absolute top-2 left-4 text-gray-300 text-base sm:text-lg font-bold transition-opacity duration-300 pointer-events-none">
+                {movie.title}
               </div>
-              {/* Gradient Layer at the Bottom */}
               <div className="absolute inset-x-0 bottom-0 h-1/5 bg-gradient-to-t from-black to-transparent transition-opacity duration-300 pointer-events-none" />
             </div>
           ))}
         </div>
 
-        {/* Dots Navigation */}
-        <div className="absolute bottom-3 flex space-x-2">
-          {slides.map((_, index) => (
+        <div className="absolute bottom-3 left-0 right-0 flex justify-center space-x-2">
+          {featuredMovies.map((movie, index) => (
             <button
-              key={index}
+              key={movie.id}
+              type="button"
+              aria-label={`Go to slide ${index + 1}`}
               className={`w-2 h-2 rounded-full ${
-                currentSlide === index ? 'bg-white' : 'bg-gray-600'
+                currentSlide === index ? "bg-white" : "bg-gray-600"
               } focus:outline-none`}
               onClick={() => handleDotClick(index)}
             />

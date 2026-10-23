@@ -18,10 +18,10 @@ exports.createUser = async (username, email, hashedPassword, role) => {
   return result.rows[0];
 };
 
-exports.createGoogleUser = async (username, email, googleId) => {
+exports.createGoogleUser = async (username, email, googleId, role) => {
   const result = await pool.query(
-    "INSERT INTO users (username, email, google_id, role_id, banned) VALUES ($1, $2, $3, 'Writer', FALSE) RETURNING *",
-    [username, email, googleId]
+    "INSERT INTO users (username, email, google_id, role_id, banned) VALUES ($1, $2, $3, $4, FALSE) RETURNING *",
+    [username, email, googleId, role]
   );
   return result.rows[0];
 };

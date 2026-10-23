@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom"; // Import useNavigate for navigation
-import logo from '../assets/logo.png';
+import logo from "../assets/logo.png";
+import { apiUrl } from "../config/api";
 
 export default function Register() {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const navigate = useNavigate(); // Create navigate function for redirection
 
   const validateForm = () => {
@@ -28,13 +29,13 @@ export default function Register() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    setError('');
-    setMessage('');
+    setError("");
+    setMessage("");
 
     if (!validateForm()) return;
 
     try {
-      const response = await fetch("https://webdev-dramaku-production.up.railway.app/register", {
+      const response = await fetch(apiUrl("/register"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -61,7 +62,9 @@ export default function Register() {
         <div className="flex flex-col justify-center items-center space-y-4">
           <img src={logo} className="w-40 h-10" alt="Logo" />
           <div className="bg-gray-800 p-8 rounded-lg shadow-md w-96">
-            <h2 className="text-white text-3xl text-center font-bold mb-6">Register</h2>
+            <h2 className="text-white text-3xl text-center font-bold mb-6">
+              Register
+            </h2>
 
             {error && <p className="text-red-500 text-center">{error}</p>}
             {message && <p className="text-green-500 text-center">{message}</p>}

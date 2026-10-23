@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import CardResult from '../components/cardSearchResult';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+import CardResult from "../components/cardSearchResult";
+import { useNavigate } from "react-router-dom";
+import { apiUrl } from "../config/api";
 
 const SearchResult = () => {
   const location = useLocation();
@@ -11,11 +12,13 @@ const SearchResult = () => {
   useEffect(() => {
     const fetchMovies = async () => {
       const queryParams = new URLSearchParams(location.search);
-      const searchTerm = queryParams.get('term'); // Ambil parameter 'term'
+      const searchTerm = queryParams.get("term"); // Ambil parameter 'term'
 
       if (searchTerm) {
         try {
-          const response = await fetch(`https://webdev-dramaku-production.up.railway.app/api/search?term=${searchTerm}`);
+          const response = await fetch(
+            apiUrl(`/api/search?term=${encodeURIComponent(searchTerm)}`),
+          );
           const data = await response.json();
 
           if (response.ok) {
@@ -24,7 +27,7 @@ const SearchResult = () => {
             setMovies([]); // Handle hasil kosong
           }
         } catch (error) {
-          console.error('Error fetching movies:', error);
+          console.error("Error fetching movies:", error);
         }
       }
     };
@@ -36,15 +39,21 @@ const SearchResult = () => {
     <div>
       {/* Modifikasi ukuran main agar sesuai */}
       <main className="p-6 pt-1 max-w-4xl mx-auto">
-        <div className="space-y-4"> {/* Ganti grid dengan space-y untuk list-style layout */}
+        <div className="space-y-4">
+          {" "}
+          {/* Ganti grid dengan space-y untuk list-style layout */}
           {movies.length > 0 ? (
             movies.map((movie) => (
-              <CardResult key={movie.id} movie={movie}
-              onClick={() => navigate(`/movies/${movie.id}`)}
-               />
+              <CardResult
+                key={movie.id}
+                movie={movie}
+                onClick={() => navigate(`/movies/${movie.id}`)}
+              />
             ))
           ) : (
-            <p className="text-center text-gray-400 col-span-full">No movies or actors found matching your search</p>
+            <p className="text-center text-gray-400 col-span-full">
+              No movies or actors found matching your search
+            </p>
           )}
         </div>
       </main>

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import CardMovie from '../components/cardMovie';
-import { useNavigate } from 'react-router-dom';
-import Slider from '../components/slider';
-
+import React, { useEffect, useState } from "react";
+import CardMovie from "../components/cardMovie";
+import { useNavigate } from "react-router-dom";
+import Slider from "../components/slider";
+import { apiUrl } from "../config/api";
 
 const Home = () => {
   const [movies, setMovies] = useState([]); // All movies from server
@@ -12,11 +12,10 @@ const Home = () => {
   const [hasMore, setHasMore] = useState(true);
   const navigate = useNavigate();
 
-
   const fetchMovies = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`https://webdev-dramaku-production.up.railway.app/movies`);
+      const response = await fetch(apiUrl("/movies"));
       const data = await response.json();
 
       if (data.length > 0) {
@@ -26,7 +25,7 @@ const Home = () => {
         setHasMore(false); // No data available
       }
     } catch (error) {
-      console.error('Error fetching movies:', error);
+      console.error("Error fetching movies:", error);
     } finally {
       setLoading(false);
     }
@@ -37,7 +36,7 @@ const Home = () => {
     const moreMovies = movies.slice(offset, nextOffset);
 
     if (moreMovies.length > 0) {
-      setVisibleMovies(prevMovies => [...prevMovies, ...moreMovies]);
+      setVisibleMovies((prevMovies) => [...prevMovies, ...moreMovies]);
       setOffset(nextOffset);
     } else {
       setHasMore(false); // No more data to load
@@ -55,16 +54,23 @@ const Home = () => {
         {/* Slider Section */}
         <Slider />
       </div>
-      <div className="px-12"> {/* Menambahkan padding kiri dan kanan */}
+      <div className="px-12">
+        {" "}
+        {/* Menambahkan padding kiri dan kanan */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6">
           {/* Render MovieCard components */}
           {visibleMovies.map((movie) => (
             <CardMovie
-              poster={movie.images || 'https://via.placeholder.com/200x300?text=No+Image+Available'}
+              poster={
+                movie.images ||
+                "https://via.placeholder.com/200x300?text=No+Image+Available"
+              }
               title={movie.title}
               year={movie.year}
               genre={movie.genre}
-              rating={movie.rating ? Number(movie.rating).toFixed(1) || '0.0' : 'N/A'}
+              rating={
+                movie.rating ? Number(movie.rating).toFixed(1) || "0.0" : "N/A"
+              }
               onClick={() => navigate(`/movies/${movie.id}`)}
             />
           ))}
@@ -79,7 +85,7 @@ const Home = () => {
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             disabled={loading}
           >
-            {loading ? 'Loading...' : 'Show More'}
+            {loading ? "Loading..." : "Show More"}
           </button>
         </div>
       )}

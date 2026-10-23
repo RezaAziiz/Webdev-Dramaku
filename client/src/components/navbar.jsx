@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import logo from '../assets/logo.png';
-import '@fortawesome/fontawesome-free/css/all.min.css';
-import { Link } from 'react-router-dom';
-import { useNavigate, useLocation } from 'react-router-dom';
-
+import React, { useState, useEffect } from "react";
+import logo from "../assets/logo.png";
+import "@fortawesome/fontawesome-free/css/all.min.css";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { USER_ROLES } from "../constants/auth";
+import { apiUrl } from "../config/api";
 
 const Navbar = () => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
-  const [isProfileDropdownVisible, setIsProfileDropdownVisible] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername] = useState('');
-  const [userRole, setUserRole] = useState('');
+  const [isProfileDropdownVisible, setIsProfileDropdownVisible] =
+    useState(false);
+  const { isAuthenticated, username, role: userRole, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [suggestions, setSuggestions] = useState([]);
@@ -23,15 +23,13 @@ const Navbar = () => {
   const years = Array.from({ length: 40 }, (_, index) => 1985 + index);
   const [actors, setActors] = useState([]);
   const [filter, setFilter] = useState({
-    genre: '',
-    country: '',
-    year: '',
-    avail: '',
-    award: '',
-    sort: '',
+    genre: "",
+    country: "",
+    year: "",
+    avail: "",
+    award: "",
+    sort: "",
   });
-
-
 
   const handleFilterChange = (event) => {
     const { name, value } = event.target;
@@ -44,25 +42,33 @@ const Navbar = () => {
   const applyFilter = () => {
     const filteredMovies = movies.filter((movie) => {
       const filterCountryId = parseInt(filter.country, 10);
-      const matchesCountry = filter.country ? movie.country_id === filterCountryId : true;
+      const matchesCountry = filter.country
+        ? movie.country_id === filterCountryId
+        : true;
       const matchesGenre = filter.genre
-        ? movie.genre.split(', ').includes(filter.genre)
-        : true;// Menggunakan name untuk genre
-      const matchesYear = filter.year ? movie.year === parseInt(filter.year) : true;
+        ? movie.genre.split(", ").includes(filter.genre)
+        : true; // Menggunakan name untuk genre
+      const matchesYear = filter.year
+        ? movie.year === parseInt(filter.year)
+        : true;
       const matchesAvail = filter.avail
-        ? normalizeAvailability(movie.availability) === normalizeAvailability(filter.avail)
+        ? normalizeAvailability(movie.availability) ===
+          normalizeAvailability(filter.avail)
         : true;
-      const matchesAward = filter.award
-        ? movie.award === filter.award
-        : true;
+      const matchesAward = filter.award ? movie.award === filter.award : true;
 
-      console.log(filter.award)
-      console.log(movie.award)
+      console.log(filter.award);
+      console.log(movie.award);
       // console.log(matchesAward)
 
-      return matchesCountry && matchesGenre && matchesYear && matchesAvail && matchesAward;
+      return (
+        matchesCountry &&
+        matchesGenre &&
+        matchesYear &&
+        matchesAvail &&
+        matchesAward
+      );
     });
-
 
     // Sorting the filtered movies based on the selected sort option
     if (filter.sort === "A-Z") {
@@ -72,55 +78,45 @@ const Navbar = () => {
     }
 
     // console.log('Filtered Movies:', filteredMovies);
-    navigate('/filtered-movies', { state: { filteredMovies, filter } });
+    navigate("/filtered-movies", { state: { filteredMovies, filter } });
     setIsDropdownVisible(false);
   };
 
   const normalizeAvailability = (availability) => {
     switch (availability.toLowerCase()) {
-      case 'amazon':
-      case 'amazon prime':
-      case 'amazon prime video':
-      case 'amazon us':
-      case 'amazon video':
-        return 'Amazon Prime Video';
-      case 'apple tv':
-      case 'apple tv ':
-      case 'apple tv+':
-      case 'apple tv +':
-        return 'Apple TV';
-      case 'crunchyroll':
-      case 'cruncyroll':
-        return 'Crunchyroll';
-      case 'disney +':
-      case 'disney+':
-        return 'Disney+';
-      case 'google play film':
-      case 'google play movies':
-        return 'Google Play Movies';
-      case 'netflix':
-      case 'netiflix':
-        return 'Netflix';
-      case 'prime video':
-      case 'primevideo':
-        return 'Prime Video';
-      case 'youtube':
-      case 'youtube ani one':
-        return 'YouTube';
+      case "amazon":
+      case "amazon prime":
+      case "amazon prime video":
+      case "amazon us":
+      case "amazon video":
+        return "Amazon Prime Video";
+      case "apple tv":
+      case "apple tv ":
+      case "apple tv+":
+      case "apple tv +":
+        return "Apple TV";
+      case "crunchyroll":
+      case "cruncyroll":
+        return "Crunchyroll";
+      case "disney +":
+      case "disney+":
+        return "Disney+";
+      case "google play film":
+      case "google play movies":
+        return "Google Play Movies";
+      case "netflix":
+      case "netiflix":
+        return "Netflix";
+      case "prime video":
+      case "primevideo":
+        return "Prime Video";
+      case "youtube":
+      case "youtube ani one":
+        return "YouTube";
       default:
         return availability;
     }
   };
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      const payload = JSON.parse(atob(token.split('.')[1])); // Decode JWT to extract username
-      setUsername(payload.username);
-      setIsAuthenticated(true);
-    }
-  }, []);
-
 
   useEffect(() => {
     if (movies.length > 0) {
@@ -129,60 +125,67 @@ const Navbar = () => {
     }
   }, [movies]);
 
-
   const getDistinctAvailabilities = () => {
     // Gabungkan semua availabilities ke dalam satu array
-    const availabilities = movies.flatMap(movie =>
+    const availabilities = movies.flatMap((movie) =>
       movie.availability
-        ? movie.availability.split(/,/).map(item => item.trim())
-        : []
+        ? movie.availability.split(/,/).map((item) => item.trim())
+        : [],
     );
 
     // Normalisasi nama yang mirip agar menjadi satu nama standar
     const normalizeAvailability = (availability) => {
       switch (availability.toLowerCase()) {
-        case 'amazon':
-        case 'amazon prime':
-        case 'amazon prime video':
-        case 'amazon us':
-        case 'amazon video':
-          return 'Amazon Prime Video';
-        case 'apple tv':
-        case 'apple tv ':
-        case 'apple tv+':
-        case 'apple tv +':
-          return 'Apple TV';
-        case 'crunchyroll':
-        case 'cruncyroll':
-          return 'Crunchyroll';
-        case 'disney +':
-        case 'disney+':
-          return 'Disney+';
-        case 'google play film':
-        case 'google play movies':
-          return 'Google Play Movies';
-        case 'netflix':
-        case 'netiflix':
-          return 'Netflix';
-        case 'prime video':
-        case 'primevideo':
-          return 'Prime Video';
-        case 'youtube':
-        case 'youtube ani one':
-          return 'YouTube';
+        case "amazon":
+        case "amazon prime":
+        case "amazon prime video":
+        case "amazon us":
+        case "amazon video":
+          return "Amazon Prime Video";
+        case "apple tv":
+        case "apple tv ":
+        case "apple tv+":
+        case "apple tv +":
+          return "Apple TV";
+        case "crunchyroll":
+        case "cruncyroll":
+          return "Crunchyroll";
+        case "disney +":
+        case "disney+":
+          return "Disney+";
+        case "google play film":
+        case "google play movies":
+          return "Google Play Movies";
+        case "netflix":
+        case "netiflix":
+          return "Netflix";
+        case "prime video":
+        case "primevideo":
+          return "Prime Video";
+        case "youtube":
+        case "youtube ani one":
+          return "YouTube";
         default:
           return availability;
       }
     };
 
     // Gunakan normalisasi dan dapatkan nilai unik
-    const uniqueAvailabilities = [...new Set(availabilities.map(normalizeAvailability))];
+    const uniqueAvailabilities = [
+      ...new Set(availabilities.map(normalizeAvailability)),
+    ];
 
     // Filter out any unwanted values
-    const filteredAvailabilities = uniqueAvailabilities.filter(availability => {
-      // Remove unwanted values such as "NaN" and any entries containing multiple services
-      return availability && !availability.includes('Microsoft Store Google Play Movies') && availability !== 'NaN';
-    });
+    const filteredAvailabilities = uniqueAvailabilities.filter(
+      (availability) => {
+        // Remove unwanted values such as "NaN" and any entries containing multiple services
+        return (
+          availability &&
+          !availability.includes("Microsoft Store Google Play Movies") &&
+          availability !== "NaN"
+        );
+      },
+    );
 
     // Sort alphabetically
     filteredAvailabilities.sort((a, b) => a.localeCompare(b));
@@ -190,40 +193,27 @@ const Navbar = () => {
     return filteredAvailabilities;
   };
 
-
   const handleSearch = () => {
     const queryParams = new URLSearchParams();
-    queryParams.append('term', searchTerm);
+    queryParams.append("term", searchTerm);
     setSuggestions([]);
     navigate(`/search?${queryParams.toString()}`);
   };
 
   const handleMovieClick = (suggestion) => {
-    setSearchTerm(''); // Clear the search term
+    setSearchTerm(""); // Clear the search term
     setSuggestions([]); // Close the suggestions dropdown
     navigate(`/movies/${suggestion.id}`); // Redirect to the movie detail page with the movie ID
   };
 
   const handleLogoClick = () => {
-    navigate('/');
+    navigate("/");
   };
 
   const handleNavigation = (path) => {
     navigate(path);
     setIsProfileDropdownVisible(false);
   };
-
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      const payload = JSON.parse(atob(token.split('.')[1])); // Decode JWT to extract username
-      setUsername(payload.username);
-      setUserRole(payload.role);
-      setIsAuthenticated(true);
-    }
-  }, []); // Empty dependency array ensures this runs only once after the component mounts
-
 
   const debounce = (func, delay) => {
     let debounceTimer;
@@ -236,24 +226,24 @@ const Navbar = () => {
 
   const fetchMovies = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production.up.railway.app/movies');
+      const response = await fetch(apiUrl("/movies"));
       const data = await response.json();
 
       if (data.length > 0) {
         setMovies(data); // Store all movies
       }
     } catch (error) {
-      console.error('Error fetching movies:', error);
+      console.error("Error fetching movies:", error);
     }
   };
 
   const fetchActors = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production.up.railway.app/actors');
+      const response = await fetch(apiUrl("/actors"));
       const data = await response.json();
       setActors(data);
     } catch (error) {
-      console.error('Error fetching actors:', error);
+      console.error("Error fetching actors:", error);
     }
   };
 
@@ -267,14 +257,14 @@ const Navbar = () => {
 
     // First, try searching in the movies
     const movieResults = movies.filter((movie) =>
-      movie.title.toLowerCase().startsWith(input)
+      movie.title.toLowerCase().startsWith(input),
     );
 
     // If no movies found, search in the actors
     let results = movieResults;
 
     // if (movieResults.length === 0) {
-    //     const actorResults = actors.filter((actor) => 
+    //     const actorResults = actors.filter((actor) =>
     //         actor.name.toLowerCase().startsWith(input)
     //     );
     //     results = actorResults; // Update results with actors if no movies were found
@@ -283,41 +273,39 @@ const Navbar = () => {
     setSuggestions(results); // Set the final results
   };
 
-
   const fetchGenres = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/genres');
+      const response = await fetch(apiUrl("/api/genres"));
       const data = await response.json();
       setGenres(data); // Menyimpan data genre ke state
     } catch (error) {
-      console.error('Error fetching genres:', error);
+      console.error("Error fetching genres:", error);
     }
   };
 
   const fetchCountries = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/countries');
+      const response = await fetch(apiUrl("/api/countries"));
       const data = await response.json();
       setCountries(data);
     } catch (error) {
-      console.error('Error fetching countries:', error);
+      console.error("Error fetching countries:", error);
     }
   };
 
-
   const fetchAwards = async () => {
     try {
-      const response = await fetch('https://webdev-dramaku-production.up.railway.app/api/awards');
+      const response = await fetch(apiUrl("/api/awards"));
       const data = await response.json();
       setAwards(data);
     } catch (error) {
-      console.error('Error fetching awards:', error);
+      console.error("Error fetching awards:", error);
     }
   };
 
   useEffect(() => {
-    if (location.pathname === '/') {
-      setSearchTerm('');
+    if (location.pathname === "/") {
+      setSearchTerm("");
       setSuggestions([]);
     }
   }, [location.pathname]);
@@ -342,10 +330,10 @@ const Navbar = () => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      const filterButton = document.getElementById('filterButton');
-      const filterDropdown = document.getElementById('filterDropdown');
-      const profileDropdown = document.getElementById('profileDropdown');
-      const profileButton = document.getElementById('profileButton');
+      const filterButton = document.getElementById("filterButton");
+      const filterDropdown = document.getElementById("filterDropdown");
+      const profileDropdown = document.getElementById("profileDropdown");
+      const profileButton = document.getElementById("profileButton");
 
       if (
         filterDropdown &&
@@ -366,30 +354,28 @@ const Navbar = () => {
       }
     };
 
-    window.addEventListener('click', handleClickOutside);
+    window.addEventListener("click", handleClickOutside);
     return () => {
-      window.removeEventListener('click', handleClickOutside);
+      window.removeEventListener("click", handleClickOutside);
     };
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("username");
-    setIsAuthenticated(false);
-    setUsername(''); // Reset username
-    navigate('/');
+    logout();
+    navigate("/");
   };
 
-
-  {/* Clear Filter Function */ }
+  {
+    /* Clear Filter Function */
+  }
   const clearFilter = () => {
     setFilter({
-      genre: '',
-      country: '',
-      year: '',
-      avail: '',
-      sort: '',
-      award: '',
+      genre: "",
+      country: "",
+      year: "",
+      avail: "",
+      sort: "",
+      award: "",
     });
   };
 
@@ -412,15 +398,13 @@ const Navbar = () => {
           placeholder="Search..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           className="w-96  p-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
         />
 
         {/* Suggestions Dropdown */}
         {suggestions.length > 0 && (
-          <div
-            className="absolute top-full mt-2 w-96 bg-white border border-gray-300 rounded-lg shadow-lg z-20 max-h-60 overflow-y-auto"
-          >
+          <div className="absolute top-full mt-2 w-96 bg-white border border-gray-300 rounded-lg shadow-lg z-20 max-h-60 overflow-y-auto">
             {/* Sort the suggestions by title in ascending order */}
             {suggestions
               .sort((a, b) => a.title.localeCompare(b.title))
@@ -447,11 +431,18 @@ const Navbar = () => {
         {/* Dropdown Menu for Filters */}
         <div
           id="filterDropdown"
-          className={`absolute right-0 mt-2 bg-gray-700 rounded-lg shadow-lg z-10 ${isDropdownVisible ? '' : 'hidden'}`}
-          style={{ width: '750px', transform: 'translateX(20%)', top: '100%', right: '0' }} // Customize the width here
+          className={`absolute right-0 mt-2 bg-gray-700 rounded-lg shadow-lg z-10 ${isDropdownVisible ? "" : "hidden"}`}
+          style={{
+            width: "750px",
+            transform: "translateX(20%)",
+            top: "100%",
+            right: "0",
+          }} // Customize the width here
         >
           <div className="p-4">
-            <div className="flex justify-between items-center"> {/* Flex untuk menyelaraskan item */}
+            <div className="flex justify-between items-center">
+              {" "}
+              {/* Flex untuk menyelaraskan item */}
               <h4 className="text-lg font-semibold text-white">Filter by:</h4>
               <div>
                 <button
@@ -469,7 +460,6 @@ const Navbar = () => {
               </div>
             </div>
             <div className="grid grid-cols-12 gap-4 mt-4">
-
               {/* Genre Filter */}
               <div className="col-span-4">
                 <label className="block text-white">Genre</label>
@@ -479,7 +469,8 @@ const Navbar = () => {
                   name="genre"
                   onChange={handleFilterChange}
                 >
-                  <option value="">All Genres</option> {/* Default empty value */}
+                  <option value="">All Genres</option>{" "}
+                  {/* Default empty value */}
                   {genres.map((genre) => (
                     <option key={genre.id} value={genre.name}>
                       {genre.name}
@@ -497,7 +488,8 @@ const Navbar = () => {
                   name="country"
                   onChange={handleFilterChange}
                 >
-                  <option value="">All Countries</option> {/* Default empty value */}
+                  <option value="">All Countries</option>{" "}
+                  {/* Default empty value */}
                   <option value="1">South Korea</option>
                   <option value="2">United States</option>
                   <option value="3">Indonesia</option>
@@ -520,7 +512,8 @@ const Navbar = () => {
                   name="year"
                   onChange={handleFilterChange}
                 >
-                  <option value="">All Years</option> {/* Default empty value */}
+                  <option value="">All Years</option>{" "}
+                  {/* Default empty value */}
                   {years.map((year) => (
                     <option key={year} value={year}>
                       {year}
@@ -538,7 +531,8 @@ const Navbar = () => {
                   name="avail"
                   onChange={handleFilterChange}
                 >
-                  <option value="">All Availability</option> {/* Default empty value */}
+                  <option value="">All Availability</option>{" "}
+                  {/* Default empty value */}
                   {availabilities.map((availability, index) => (
                     <option key={index} value={availability}>
                       {availability}
@@ -549,14 +543,17 @@ const Navbar = () => {
 
               {/* Sort Alphabetically Filter */}
               <div className="col-span-6">
-                <label className="block text-white">Sort Alphabetically Title</label>
+                <label className="block text-white">
+                  Sort Alphabetically Title
+                </label>
                 <select
                   className="w-full p-2 bg-gray-900 rounded"
                   value={filter.sort} // Assuming filter.sort is the state for sort option
                   name="sort"
                   onChange={handleFilterChange}
                 >
-                  <option value="">No Sorting</option> {/* Default empty value */}
+                  <option value="">No Sorting</option>{" "}
+                  {/* Default empty value */}
                   <option value="A-Z">A-Z</option>
                   <option value="Z-A">Z-A</option>
                 </select>
@@ -568,17 +565,22 @@ const Navbar = () => {
                 <select
                   className="w-full p-2 bg-gray-900 rounded"
                   value={filter.award}
-                  onChange={(e) => setFilter({ ...filter, award: e.target.value })}
+                  onChange={(e) =>
+                    setFilter({ ...filter, award: e.target.value })
+                  }
                 >
-                  <option value="">All Awards</option> {/* Default empty value */}
+                  <option value="">All Awards</option>{" "}
+                  {/* Default empty value */}
                   {awards.map((award) => (
-                    <option key={award.id} value={`${award.name} (${award.year})`}>
+                    <option
+                      key={award.id}
+                      value={`${award.name} (${award.year})`}
+                    >
                       {`${award.name} (${award.year})`}
                     </option>
                   ))}
                 </select>
               </div>
-
             </div>
           </div>
         </div>
@@ -586,7 +588,6 @@ const Navbar = () => {
 
       {/* Watchlist and Profile with Dropdown */}
       <div className="flex items-center">
-
         <a
           href={isAuthenticated ? `/watchlist/${username}` : "/login"}
           className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-2 rounded-full flex items-center mr-2"
@@ -608,27 +609,27 @@ const Navbar = () => {
               onClick={toggleProfileDropdown}
               className="bg-blue-300 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm cursor-pointer"
             >
-              {username ? username.charAt(0).toUpperCase() : ''}
+              {username ? username.charAt(0).toUpperCase() : ""}
             </div>
             {isProfileDropdownVisible && (
               <div
                 id="profileDropdown"
                 className="absolute right-0 mt-2 bg-gray-700 rounded-lg shadow-lg z-10"
-                style={{ top: '100%', right: '0' }}
+                style={{ top: "100%", right: "0" }}
               >
                 {/* Conditionally render based on role */}
-                {userRole === 'Admin' && (
+                {userRole === USER_ROLES.ADMIN && (
                   <button
-                    onClick={() => handleNavigation('/dramaInput')}
+                    onClick={() => handleNavigation("/dramaInput")}
                     className="block w-full px-4 py-2 text-white hover:bg-gray-800 text-left"
                   >
                     CMSAdmin
                   </button>
                 )}
 
-                {userRole === 'Writer' && (
+                {userRole === USER_ROLES.WRITER && (
                   <button
-                    onClick={() => handleNavigation('/dramaInput')}  // Adjust the route as needed
+                    onClick={() => handleNavigation("/dramaInput")} // Adjust the route as needed
                     className="block w-full px-4 py-2 text-white hover:bg-gray-800 text-left"
                   >
                     CMSWriter
@@ -646,10 +647,7 @@ const Navbar = () => {
             )}
           </div>
         )}
-
-
       </div>
-
     </nav>
   );
 };

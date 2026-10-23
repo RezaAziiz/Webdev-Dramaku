@@ -3,8 +3,11 @@ const jwt = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
 const userRepository = require('../repositories/userRepository');
 const AppError = require('../utils/AppError');
+const ROLES = require('../constants/roles');
+const EMAIL_DOMAINS = require('../constants/emailDomains');
+const env = require('../config/env');
 
-const client = new OAuth2Client("193966095713-ooq3r03aaanmf67tudroa67ccctfqvk6.apps.googleusercontent.com");
+const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
 exports.login = async (username, password) => {
   const user = await userRepository.findByUsername(username);
@@ -24,8 +27,8 @@ exports.login = async (username, password) => {
 
   const token = jwt.sign(
     { username: user.username, role: user.role_id, banned: user.banned },
-    "your_jwt_secret",
-    { expiresIn: "1h" }
+    env.JWT_SECRET,
+    { expiresIn: env.JWT_EXPIRES_IN }
   );
 
   return { token, role: user.role_id, banned: user.banned };
@@ -34,10 +37,10 @@ exports.login = async (username, password) => {
 exports.register = async (username, email, password) => {
   let role;
 
-  if (email.endsWith("@admindramaku.com")) {
-    role = "Admin";
-  } else if (email.endsWith("@gmail.com")) {
-    role = "Writer"; 
+  if (email.endsWith(EMAIL_DOMAINS.ADMIN)) {
+    role = ROLES.ADMIN;
+  } else if (email.endsWith(EMAIL_DOMAINS.WRITER)) {
+    role = ROLES.WRITER;
   } else {
     throw new AppError("Invalid email domain", 400);
   }
@@ -56,14 +59,14 @@ exports.register = async (username, email, password) => {
 exports.googleLogin = async (googleToken) => {
   const ticket = await client.verifyIdToken({
     idToken: googleToken,
-    audience: "193966095713-ooq3r03aaanmf67tudroa67ccctfqvk6.apps.googleusercontent.com",
+    audience: env.GOOGLE_CLIENT_ID,
   });
   const googleUser = ticket.getPayload();
 
   let user = await userRepository.findByGoogleId(googleUser.sub);
 
   if (!user) {
-    user = await userRepository.createGoogleUser(googleUser.name, googleUser.email, googleUser.sub);
+    user = await userRepository.createGoogleUser(googleUser.name, googleUser.email, googleUser.sub, ROLES.WRITER);
   }
 
   if (user.banned) {
@@ -72,8 +75,8 @@ exports.googleLogin = async (googleToken) => {
 
   const jwtToken = jwt.sign(
     { username: user.username, role: user.role_id },
-    "your_jwt_secret",
-    { expiresIn: "1h" }
+    env.JWT_SECRET,
+    { expiresIn: env.JWT_EXPIRES_IN }
   );
 
   return { token: jwtToken, role: user.role_id };
