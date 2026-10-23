@@ -4,6 +4,120 @@ import useFeaturedMovies from "../hooks/useFeaturedMovies";
 import ResponsiveImage from "./common/ResponsiveImage";
 
 const AUTO_SLIDE_INTERVAL_MS = 5000;
+const DEFAULT_TINT = "#0d9488";
+const DEFAULT_BG = "#0a1428";
+
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const rgbToHex = ({ r, g, b }) =>
+  `#${[r, g, b]
+    .map((channel) => clamp(Math.round(channel), 0, 255).toString(16).padStart(2, "0"))
+    .join("")}`;
+
+const hexToRgb = (hex) => {
+  const parsed = hex.replace("#", "");
+  const safeHex = parsed.length === 3 ? parsed.split("").map((char) => char + char).join("") : parsed;
+
+  return {
+    r: Number.parseInt(safeHex.slice(0, 2), 16),
+    g: Number.parseInt(safeHex.slice(2, 4), 16),
+    b: Number.parseInt(safeHex.slice(4, 6), 16),
+  };
+};
+
+const mixHex = (baseHex, mixHexValue, amount) => {
+  const first = hexToRgb(baseHex);
+  const second = hexToRgb(mixHexValue);
+
+  const blend = {
+    r: first.r + (second.r - first.r) * amount,
+    g: first.g + (second.g - first.g) * amount,
+    b: first.b + (second.b - first.b) * amount,
+  };
+
+  return rgbToHex(blend);
+};
+
+const toRgba = (hex, alpha) => {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const computePaletteFromImage = (imageUrl) =>
+  new Promise((resolve) => {
+    if (!imageUrl || typeof window === "undefined") {
+      resolve({ tint: DEFAULT_TINT, accent: DEFAULT_TINT, bg: DEFAULT_BG });
+      return;
+    }
+
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        resolve({ tint: DEFAULT_TINT, accent: DEFAULT_TINT, bg: DEFAULT_BG });
+        return;
+      }
+
+      const sampleSize = 48;
+      canvas.width = sampleSize;
+      canvas.height = sampleSize;
+      context.drawImage(image, 0, 0, sampleSize, sampleSize);
+
+      const { data } = context.getImageData(0, 0, sampleSize, sampleSize);
+      let totalRed = 0;
+      let totalGreen = 0;
+      let totalBlue = 0;
+      let pixelCount = 0;
+
+      for (let index = 0; index < data.length; index += 16) {
+        const alpha = data[index + 3];
+        if (alpha < 128) continue;
+
+        totalRed += data[index];
+        totalGreen += data[index + 1];
+        totalBlue += data[index + 2];
+        pixelCount += 1;
+      }
+
+      if (!pixelCount) {
+        resolve({ tint: DEFAULT_TINT, accent: DEFAULT_TINT, bg: DEFAULT_BG });
+        return;
+      }
+
+      const average = {
+        r: totalRed / pixelCount,
+        g: totalGreen / pixelCount,
+        b: totalBlue / pixelCount,
+      };
+
+      const tint = rgbToHex({
+        r: average.r * 0.4,
+        g: average.g * 0.4,
+        b: average.b * 0.4,
+      });
+
+      const accent = rgbToHex({
+        r: clamp(average.r * 1.15, 0, 255),
+        g: clamp(average.g * 1.15, 0, 255),
+        b: clamp(average.b * 1.15, 0, 255),
+      });
+
+      resolve({
+        tint,
+        accent,
+        bg: mixHex(DEFAULT_BG, tint, 0.7),
+      });
+    };
+
+    image.onerror = () => {
+      resolve({ tint: DEFAULT_TINT, accent: DEFAULT_TINT, bg: DEFAULT_BG });
+    };
+
+    image.src = imageUrl;
+  });
 
 const Slider = () => {
   const { featuredMovies, loading, error } = useFeaturedMovies();
@@ -20,6 +134,31 @@ const Slider = () => {
     }, AUTO_SLIDE_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [totalSlides]);
+
+  useEffect(() => {
+    if (!featuredMovies[currentSlide]?.images) {
+      return undefined;
+    }
+
+    let isCurrent = true;
+
+    const applyPalette = async () => {
+      const palette = await computePaletteFromImage(featuredMovies[currentSlide].images);
+      if (!isCurrent) return;
+
+      const root = document.documentElement;
+      root.style.setProperty("--tint", palette.tint);
+      root.style.setProperty("--bg-base", palette.bg);
+      root.style.setProperty("--accent", palette.accent);
+      root.style.setProperty("--accent-soft", toRgba(palette.accent, 0.18));
+    };
+
+    applyPalette();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [currentSlide, featuredMovies]);
 
   const handleSlideClick = (movieId) => {
     navigate(`movies/${movieId}`);
