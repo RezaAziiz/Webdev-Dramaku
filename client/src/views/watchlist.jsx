@@ -2,11 +2,29 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CardMovie from "../components/cardMovie";
 import { useAuth } from "../contexts/AuthContext";
-import { apiUrl } from "../config/api";
+import { getWatchlist, removeFromWatchlist } from "../services/watchlistService";
+import { getMovieDetails } from "../services/movieService";
+
+const IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
+const PLACEHOLDER_POSTER =
+  "https://via.placeholder.com/300x450?text=No+Image+Available";
+
+// Adapts a raw TMDB details object into the flat shape this view renders.
+const toDisplayItem = (tmdbId, mediaType, details) => ({
+  tmdbId,
+  mediaType,
+  title: details?.title || details?.name || "Title Not Available",
+  poster: details?.poster_path
+    ? `${IMAGE_BASE}${details.poster_path}`
+    : PLACEHOLDER_POSTER,
+  year: (details?.release_date || details?.first_air_date || "").slice(0, 4),
+  genre: (details?.genres || []).map((g) => g.name).join(", "),
+  rating: details?.vote_average,
+});
 
 const Watchlist = () => {
   const [watchlist, setWatchlist] = useState([]);
-  const { isAuthenticated: isLoggedIn, username } = useAuth();
+  const { isAuthenticated: isLoggedIn, token } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -16,43 +34,45 @@ const Watchlist = () => {
   }, [isLoggedIn, navigate]);
 
   useEffect(() => {
-    if (isLoggedIn && username) {
-      const fetchWatchlist = async () => {
-        try {
-          const response = await fetch(apiUrl(`/api/watchlist/${username}`));
-          if (!response.ok) {
-            const errorData = await response.text();
-            console.error("Error fetching watchlist:", errorData);
-            return;
-          }
-          const contentType = response.headers.get("Content-Type");
-          if (contentType && contentType.includes("application/json")) {
-            const data = await response.json();
-            setWatchlist(data);
-          } else {
-            console.error("Expected JSON, but received:", contentType);
-          }
-        } catch (error) {
-          console.error("Error fetching watchlist:", error);
-        }
-      };
-      fetchWatchlist();
-    }
-  }, [isLoggedIn, username]);
+    if (!isLoggedIn || !token) return;
 
-  const removeFromWatchlist = async (movieId) => {
-    try {
-      const response = await fetch(
-        apiUrl(`/api/watchlist/${username}/${movieId}`),
-        {
-          method: "DELETE",
-        },
-      );
-      if (response.ok) {
-        setWatchlist(watchlist.filter((movie) => movie.id !== movieId));
-      } else {
-        console.error("Failed to remove movie from watchlist");
+    const fetchWatchlist = async () => {
+      try {
+        const entries = await getWatchlist(token);
+        const items = await Promise.all(
+          (entries || []).map(async (entry) => {
+            try {
+              const details = await getMovieDetails(
+                entry.media_type,
+                entry.tmdb_id,
+              );
+              return toDisplayItem(entry.tmdb_id, entry.media_type, details);
+            } catch (error) {
+              console.error(
+                `Error fetching details for ${entry.media_type}/${entry.tmdb_id}:`,
+                error,
+              );
+              return toDisplayItem(entry.tmdb_id, entry.media_type, null);
+            }
+          }),
+        );
+        setWatchlist(items);
+      } catch (error) {
+        console.error("Error fetching watchlist:", error);
       }
+    };
+
+    fetchWatchlist();
+  }, [isLoggedIn, token]);
+
+  const handleRemove = async (tmdbId, mediaType) => {
+    try {
+      await removeFromWatchlist(tmdbId, mediaType, token);
+      setWatchlist((prev) =>
+        prev.filter(
+          (item) => !(item.tmdbId === tmdbId && item.mediaType === mediaType),
+        ),
+      );
     } catch (error) {
       console.error("Error removing movie from watchlist:", error);
     }
@@ -63,25 +83,24 @@ const Watchlist = () => {
       <h1 className="text-3xl font-semibold mb-6">Your Watchlist</h1>
       {watchlist.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6">
-          {watchlist.map((movie) => (
-            <div key={movie.id} className="relative">
+          {watchlist.map((item) => (
+            <div key={`${item.mediaType}-${item.tmdbId}`} className="relative">
               <CardMovie
-                poster={
-                  movie.images ||
-                  "https://via.placeholder.com/200x300?text=No+Image+Available"
-                }
-                title={movie.title}
-                year={movie.year}
-                genre={movie.genre}
+                poster={item.poster}
+                title={item.title}
+                year={item.year}
+                genre={item.genre}
                 rating={
-                  movie.rating && Number(movie.rating) > 0
-                    ? Number(movie.rating).toFixed(1)
+                  item.rating && Number(item.rating) > 0
+                    ? Number(item.rating).toFixed(1)
                     : "N/A"
                 }
-                onClick={() => navigate(`/movies/${movie.id}`)}
+                onClick={() =>
+                  navigate(`/movies/${item.mediaType}/${item.tmdbId}`)
+                }
               />
               <button
-                onClick={() => removeFromWatchlist(movie.id)}
+                onClick={() => handleRemove(item.tmdbId, item.mediaType)}
                 className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded"
               >
                 Remove

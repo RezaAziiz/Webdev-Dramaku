@@ -32,67 +32,13 @@ const Sidebar = () => {
         <img src={logo} alt="Logo" className="w-40 h-10 mr-2 cursor-pointer" />
       </div>
       <ul className="space-y-2 mt-5">
-        {/* Show for both Admin and Writer */}
-        {/* Show only for Writer */}
-        {userRole === USER_ROLES.WRITER && (
-          <li
-            className={`py-2 pl-4 text-gray-100 font-bold cursor-pointer hover:bg-gray-500 rounded-lg active:bg-gray-700 ${activeClass("/dramaInput")}`}
-            onClick={() => handleNavigation("/dramaInput")}
-          >
-            Input Drama
-          </li>
-        )}
         {userRole !== USER_ROLES.WRITER && (
-          <>
-            <li
-              className={`py-2 pl-4 text-gray-100 font-bold cursor-pointer hover:bg-gray-500 rounded-lg active:bg-gray-700 ${activeClass("/dramaInput")}`}
-              onClick={() => handleNavigation("/dramaInput")}
-            >
-              Input Drama
-            </li>
-            <li
-              className={`py-2 pl-4 text-gray-100 font-bold cursor-pointer hover:bg-gray-500 rounded-lg active:bg-gray-700 ${activeClass("/drama")}`}
-              onClick={() => handleNavigation("/drama")}
-            >
-              Validate
-            </li>
-            <li
-              className={`py-2 pl-4 text-gray-100 font-bold cursor-pointer hover:bg-gray-500 rounded-lg active:bg-gray-700 ${activeClass("/countries")}`}
-              onClick={() => handleNavigation("/countries")}
-            >
-              Countries
-            </li>
-            <li
-              className={`py-2 pl-4 text-gray-100 font-bold cursor-pointer hover:bg-gray-500 rounded-lg active:bg-gray-700 ${activeClass("/awards")}`}
-              onClick={() => handleNavigation("/awards")}
-            >
-              Awards
-            </li>
-            <li
-              className={`py-2 pl-4 text-gray-100 font-bold cursor-pointer hover:bg-gray-500 rounded-lg active:bg-gray-700 ${activeClass("/genres")}`}
-              onClick={() => handleNavigation("/genres")}
-            >
-              Genres
-            </li>
-            <li
-              className={`py-2 pl-4 text-gray-100 font-bold cursor-pointer hover:bg-gray-500 rounded-lg active:bg-gray-700 ${activeClass("/actors")}`}
-              onClick={() => handleNavigation("/actors")}
-            >
-              Actors
-            </li>
-            <li
-              className={`py-2 pl-4 text-gray-100 font-bold cursor-pointer hover:bg-gray-500 rounded-lg active:bg-gray-700 ${activeClass("/comments")}`}
-              onClick={() => handleNavigation("/comments")}
-            >
-              Comments
-            </li>
-            <li
-              className={`py-2 pl-4 text-gray-100 font-bold cursor-pointer hover:bg-gray-500 rounded-lg active:bg-gray-700 ${activeClass("/users")}`}
-              onClick={() => handleNavigation("/users")}
-            >
-              Users
-            </li>
-          </>
+          <li
+            className={`py-2 pl-4 text-gray-100 font-bold cursor-pointer hover:bg-gray-500 rounded-lg active:bg-gray-700 ${activeClass("/users")}`}
+            onClick={() => handleNavigation("/users")}
+          >
+            Users
+          </li>
         )}
       </ul>
     </aside>

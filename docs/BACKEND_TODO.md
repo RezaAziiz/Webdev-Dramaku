@@ -7,6 +7,7 @@ The frontend redesign needs a few product fields that the current API contract d
 1. `GET /api/trending`
    - Returns a curated list of featured titles for the hero and trending row.
    - Required fields: `id`, `title`, `images`, `description`, `year`, `rating`, `type`, `genre`.
+   - For sharp full-bleed hero artwork, include a landscape `backdrop_path` or high-resolution `backdrop` URL when available; retain `images` as the poster/fallback image.
 
 2. `GET /api/watch-history`
    - Returns the user's continue-watching list.
@@ -26,6 +27,7 @@ The frontend redesign needs a few product fields that the current API contract d
 5. Palette metadata for hero backgrounds
    - Optional but recommended: `palette: { dominant, tint, accent }`, computed once per title and cached.
    - This lets the frontend update the page background without browser-side image sampling.
+   - The frontend uses valid hex values from this metadata when present. Cross-origin poster images may block canvas sampling, so metadata is required for consistently adaptive page colors.
 
 6. Discover/search scalability and metadata
    - The current frontend uses `/movies`, `/api/genres`, `/api/search?term=...`, and `/suggestions?term=...`; the existing API contracts are unchanged.

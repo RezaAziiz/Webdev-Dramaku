@@ -16,8 +16,8 @@ const Footer = () => (
     </div>
     <nav className="site-footer-links" aria-label="Footer navigation">
       <Link to="/">Home</Link>
-      <Link to="/#added-title">Movies</Link>
-      <Link to="/#browse-title">TV Shows</Link>
+      <Link to="/search?type=movie">Movies</Link>
+      <Link to="/search?type=tv">TV Shows</Link>
       <Link to="/#anime-title">Anime</Link>
       <Link to="/search">Discover</Link>
       <Link to="/login">Sign in</Link>

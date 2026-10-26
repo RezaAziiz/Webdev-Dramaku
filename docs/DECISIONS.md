@@ -27,3 +27,5 @@
 - Derive filter options from the loaded catalog. Progressive result rendering is client-side until the backend provides pagination; do not simulate loading delays or fabricate result counts.
 - Support the existing Anime navigation query as a distinct type filter when the API identifies Anime by media type or genre.
 - Use a mobile filter sheet with keyboard dismissal, focus return/trapping, and explicit Apply/Reset; desktop uses inline filters.
+- Render the homepage hero from `/movies/featured` when available and fall back to actual trending-feed items when that endpoint is empty or unavailable; do not let a failed optional feed remove the whole hero.
+- Use neutral translucent white glass surfaces rather than opaque blue fills. Prefer API-provided poster palette metadata and retain image sampling as a CORS-permitted fallback.

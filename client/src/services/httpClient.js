@@ -42,15 +42,22 @@ const request = async (
   path,
   { method = "GET", body, token, isFormData = false, signal } = {},
 ) => {
-  const response = await fetch(apiUrl(path), {
-    method,
-    headers: buildHeaders(token, body !== undefined, isFormData),
-    signal,
-    body:
-      body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
-  });
+  try {
+    const response = await fetch(apiUrl(path), {
+      method,
+      headers: buildHeaders(token, body !== undefined, isFormData),
+      signal,
+      body:
+        body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
+    });
 
-  return parseResponse(response);
+    return await parseResponse(response);
+  } catch (error) {
+    if (signal?.aborted && error instanceof Error && error.name === "AbortError") {
+      return null;
+    }
+    throw error;
+  }
 };
 
 export const httpClient = {

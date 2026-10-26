@@ -1,11 +1,20 @@
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import CardMovie from '../components/cardMovie';
 
 const FilteredMovies = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const filteredMovies = location.state?.filteredMovies ?? [];
+  if (!Array.isArray(location.state?.filteredMovies)) {
+    return <Navigate to="/search?type=movie" replace />;
+  }
+  const filteredMovies = location.state.filteredMovies;
+  const getMediaType = (type) =>
+    ['tv', 'series', 'tv show', 'show'].includes(
+      String(type || '').trim().toLowerCase(),
+    )
+      ? 'tv'
+      : 'movie';
 
   return (
     <div>
@@ -20,7 +29,7 @@ const FilteredMovies = () => {
                 year={movie.year}
                 genre={movie.genre}
                 rating={movie.rating ? Number(movie.rating).toFixed(1) : 'N/A'}
-                onClick={() => navigate(`/movies/${movie.id}`)}
+                onClick={() => navigate(`/movies/${getMediaType(movie.type)}/${movie.id}`)}
               />
             ))
           ) : (

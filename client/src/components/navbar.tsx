@@ -9,7 +9,7 @@ import {
   LuSearch,
   LuTv,
 } from "react-icons/lu";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { USER_ROLES } from "../constants/auth";
 
@@ -22,7 +22,7 @@ type AuthState = {
 
 const primaryLinks = [
   { label: "Home", to: "/", icon: LuHome },
-  { label: "Movies", to: "/filtered-movies", icon: LuClapperboard },
+  { label: "Movies", to: "/search?type=movie", icon: LuClapperboard },
   { label: "Trending", to: "/#trending", icon: LuCompass },
   { label: "TV Shows", to: "/search?type=tv", icon: LuTv },
   { label: "Anime", to: "/search?type=anime", icon: LuBookmark },
@@ -31,15 +31,40 @@ const primaryLinks = [
 
 const mobileLinks = [
   { label: "Home", to: "/", icon: LuHome },
-  { label: "Movies", to: "/filtered-movies", icon: LuClapperboard },
+  { label: "Movies", to: "/search?type=movie", icon: LuClapperboard },
   { label: "TV", to: "/search?type=tv", icon: LuTv },
   { label: "Anime", to: "/search?type=anime", icon: LuBookmark },
 ];
+
+const isNavigationTargetActive = (to: string, isActive: boolean, location: {
+  pathname: string;
+  search: string;
+  hash: string;
+}) => {
+  if (to.includes("#")) {
+    const [pathname, hash] = to.split("#");
+    return location.pathname === (pathname || "/") && location.hash === `#${hash}`;
+  }
+  if (to.includes("?")) {
+    const [pathname, search] = to.split("?");
+    const expected = new URLSearchParams(search);
+    const current = new URLSearchParams(location.search);
+    return (
+      location.pathname === pathname &&
+      [...expected].every(([key, value]) => current.get(key) === value)
+    );
+  }
+  if (to === "/search") {
+    return location.pathname === to && location.search === "";
+  }
+  return isActive;
+};
 
 export default function Navbar() {
   const { isAuthenticated, username, role, logout } = useAuth() as AuthState;
   const safeUsername = typeof username === "string" ? username : "";
   const navigate = useNavigate();
+  const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
@@ -81,7 +106,9 @@ export default function Navbar() {
           to={to}
           end={to === "/"}
           className={({ isActive }) =>
-            `desktop-nav-link${isActive ? " is-active" : ""}`
+            `desktop-nav-link${
+              isNavigationTargetActive(to, isActive, location) ? " is-active" : ""
+            }`
           }
         >
           {label}
@@ -229,7 +256,9 @@ export default function Navbar() {
             to={to}
             end={to === "/"}
             className={({ isActive }) =>
-              `mobile-tab${isActive ? " is-active" : ""}`
+              `mobile-tab${
+                isNavigationTargetActive(to, isActive, location) ? " is-active" : ""
+              }`
             }
           >
             <Icon aria-hidden="true" />

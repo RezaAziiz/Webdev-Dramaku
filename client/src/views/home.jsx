@@ -13,19 +13,10 @@ import {
   normalizeGenre,
   normalizeMovie,
 } from "../adapters/mediaAdapter";
-import {
-  mockContinueWatching,
-  mockJustAdded,
-  mockTrending,
-} from "../mocks/streaming";
 import { addToWatchlist } from "../services/watchlistService";
 import { getGenres } from "../services/catalogService";
-import { getAllMovies } from "../services/movieService";
-
-const PREVIEW_MODE =
-  process.env.REACT_APP_USE_PREVIEW_DATA === "true" ||
-  (process.env.NODE_ENV !== "production" &&
-    process.env.REACT_APP_USE_PREVIEW_DATA !== "false");
+import { discover, getJustAdded, getTrending } from "../services/movieService";
+import { getContinueWatching } from "../services/watchHistoryService";
 
 const getMetaLine = (movie) =>
   [
@@ -46,82 +37,68 @@ const getTimeLeft = (movie) => {
 
 const responseItems = (response) => {
   if (Array.isArray(response)) return response;
+  if (response && Array.isArray(response.results)) return response.results;
   if (response && Array.isArray(response.items)) return response.items;
   if (response && Array.isArray(response.movies)) return response.movies;
   if (response && Array.isArray(response.genres)) return response.genres;
   return [];
 };
 
-const genreTagline = (genreName) => {
-  const taglines = {
-    action: "ADRENALINE",
-    adventure: "QUESTS",
-    "science fiction": "FUTURE COSMOS",
-    "sci-fi": "FUTURE COSMOS",
-    drama: "CHARACTER STUDIES",
-    mystery: "HIDDEN CLUES",
-    romance: "HEART & CONNECTION",
-    fantasy: "OTHER WORLDS",
-    thriller: "EDGE OF YOUR SEAT",
-    comedy: "LIGHTER MOMENTS",
-  };
-  return taglines[genreName.toLowerCase()] ?? "EXPLORE THE GENRE";
-};
-
-const matchesBrowseFilter = (movie, genreName, browseType) => {
-  const normalized = normalizeMovie(movie);
-  if (browseType === "TV Show") {
-    const type = normalized.type?.toLowerCase();
-    if (type !== "tv" && type !== "series" && type !== "tv show") return false;
-  } else if (
-    normalized.type &&
-    !["movie", "film"].includes(normalized.type.toLowerCase())
-  ) {
-    return false;
-  }
-  return normalized.genre.some(
-    (genre) => genre.toLowerCase() === genreName.toLowerCase(),
-  );
+const movieDetailPath = (movie) => {
+  const type = ["tv", "series", "tv show", "show"].includes(
+    String(movie.type || "").trim().toLowerCase(),
+  )
+    ? "tv"
+    : "movie";
+  return `/movies/${type}/${encodeURIComponent(movie.id)}`;
 };
 
 const Home = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, username } = useAuth();
+  const { isAuthenticated, token } = useAuth();
   const [activeTrend, setActiveTrend] = useState(0);
   const [mediaFilter, setMediaFilter] = useState("All");
   const [savedMovieIds, setSavedMovieIds] = useState(() => new Set());
   const [pendingBookmarkId, setPendingBookmarkId] = useState(null);
   const [bookmarkError, setBookmarkError] = useState("");
+
+  const [trendingAttempt, setTrendingAttempt] = useState(0);
+  const [trendingItems, setTrendingItems] = useState([]);
+  const [trendingLoading, setTrendingLoading] = useState(true);
+  const [trendingError, setTrendingError] = useState("");
+
+  const [justAddedAttempt, setJustAddedAttempt] = useState(0);
+  const [justAddedItems, setJustAddedItems] = useState([]);
+  const [justAddedLoading, setJustAddedLoading] = useState(true);
+  const [justAddedError, setJustAddedError] = useState("");
+
+  const [continueWatchingAttempt, setContinueWatchingAttempt] = useState(0);
+  const [continueWatchingItems, setContinueWatchingItems] = useState([]);
+  const [continueWatchingError, setContinueWatchingError] = useState("");
+
   const [catalogAttempt, setCatalogAttempt] = useState(0);
-  const [catalogItems, setCatalogItems] = useState([]);
   const [genreItems, setGenreItems] = useState([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState("");
   const [activeGenreId, setActiveGenreId] = useState(null);
   const [browseType, setBrowseType] = useState("Movie");
+
+  const [genreResultsAttempt, setGenreResultsAttempt] = useState(0);
+  const [genreResultsItems, setGenreResultsItems] = useState([]);
+  const [genreResultsRaw, setGenreResultsRaw] = useState([]);
+  const [genreResultsLoading, setGenreResultsLoading] = useState(true);
+  const [genreResultsError, setGenreResultsError] = useState("");
+
+  const [animeAttempt, setAnimeAttempt] = useState(0);
+  const [animeItems, setAnimeItems] = useState([]);
+  const [animeLoading, setAnimeLoading] = useState(true);
+  const [animeError, setAnimeError] = useState("");
+
   const trendingRef = useRef(null);
+  const justAddedRef = useRef(null);
   const genreTrackRef = useRef(null);
   const genreResultsTrackRef = useRef(null);
 
-  const trendingItems = useMemo(
-    () => (PREVIEW_MODE ? mockTrending.map(normalizeMovie) : []),
-    [],
-  );
-  const justAddedItems = useMemo(
-    () => (PREVIEW_MODE ? mockJustAdded.map(normalizeMovie) : []),
-    [],
-  );
-  const continueWatchingItems = useMemo(
-    () =>
-      isAuthenticated && PREVIEW_MODE
-        ? mockContinueWatching.map(normalizeContinueWatching)
-        : [],
-    [isAuthenticated],
-  );
-  const normalizedCatalog = useMemo(
-    () => catalogItems.map(normalizeMovie),
-    [catalogItems],
-  );
   const normalizedGenres = useMemo(
     () =>
       genreItems
@@ -133,15 +110,21 @@ const Home = () => {
     normalizedGenres.find((genre) => genre.id === activeGenreId) ??
     normalizedGenres[0] ??
     null;
-  const animeItems = normalizedCatalog.filter(
-    (movie) =>
-      movie.type?.toLowerCase() === "anime" ||
-      movie.genre.some((genre) => genre.toLowerCase() === "anime"),
+  const animationGenreId = useMemo(() => {
+    const match = normalizedGenres.find(
+      (genre) => genre.name.toLowerCase() === "animation",
+    );
+    return match ? match.id : null;
+  }, [normalizedGenres]);
+  const representativePool = useMemo(
+    () => [
+      ...trendingItems,
+      ...justAddedItems,
+      ...genreResultsItems,
+      ...animeItems,
+    ],
+    [trendingItems, justAddedItems, genreResultsItems, animeItems],
   );
-  const genreResults = normalizedCatalog.filter((movie) => {
-    if (!activeGenre) return false;
-    return matchesBrowseFilter(movie, activeGenre.name, browseType);
-  });
   const repeatedTrendingItems = useMemo(
     () => [...trendingItems, ...trendingItems, ...trendingItems],
     [trendingItems],
@@ -152,29 +135,106 @@ const Home = () => {
     : 0;
 
   useEffect(() => {
-    const controller = new AbortController();
+    let isCurrent = true;
+    setTrendingLoading(true);
+    setTrendingError("");
+
+    getTrending()
+      .then((response) => {
+        if (!isCurrent) return;
+        setTrendingItems(responseItems(response).map(normalizeMovie));
+      })
+      .catch((error) => {
+        if (!isCurrent) return;
+        setTrendingError(
+          error instanceof Error
+            ? error.message
+            : "Could not load trending titles.",
+        );
+      })
+      .finally(() => {
+        if (isCurrent) setTrendingLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [trendingAttempt]);
+
+  useEffect(() => {
+    let isCurrent = true;
+    setJustAddedLoading(true);
+    setJustAddedError("");
+
+    Promise.allSettled([
+      getJustAdded("movie"),
+      getJustAdded("tv"),
+    ]).then((results) => {
+      if (!isCurrent) return;
+
+      const items = results
+        .filter((result) => result.status === "fulfilled")
+        .flatMap((result) => responseItems(result.value));
+      setJustAddedItems(items.map(normalizeMovie));
+
+      const failed = results.find(
+        (result) => result.status === "rejected",
+      );
+      if (failed) {
+        setJustAddedError(
+          failed.reason instanceof Error
+            ? failed.reason.message
+            : "Could not load the latest titles.",
+        );
+      }
+      setJustAddedLoading(false);
+    });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [justAddedAttempt]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !token) {
+      setContinueWatchingItems([]);
+      setContinueWatchingError("");
+      return undefined;
+    }
+
+    let isCurrent = true;
+    setContinueWatchingError("");
+
+    getContinueWatching(token)
+      .then((response) => {
+        if (!isCurrent) return;
+        setContinueWatchingItems(
+          responseItems(response).map(normalizeContinueWatching),
+        );
+      })
+      .catch((error) => {
+        if (!isCurrent) return;
+        setContinueWatchingError(
+          error instanceof Error
+            ? error.message
+            : "Could not load your continue watching list.",
+        );
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [isAuthenticated, token, continueWatchingAttempt]);
+
+  useEffect(() => {
     let isCurrent = true;
     setCatalogLoading(true);
     setCatalogError("");
 
-    const loadCatalog = async () => {
-      const [moviesResult, genresResult] = await Promise.allSettled([
-        getAllMovies({ signal: controller.signal }),
-        getGenres({ signal: controller.signal }),
-      ]);
-      if (!isCurrent) return;
-
-      const messages = [];
-      if (moviesResult.status === "fulfilled") {
-        setCatalogItems(responseItems(moviesResult.value));
-      } else if (!controller.signal.aborted) {
-        messages.push(
-          `Catalog could not be loaded: ${moviesResult.reason instanceof Error ? moviesResult.reason.message : "request failed"}`,
-        );
-      }
-
-      if (genresResult.status === "fulfilled") {
-        const genres = responseItems(genresResult.value);
+    getGenres()
+      .then((response) => {
+        if (!isCurrent) return;
+        const genres = responseItems(response);
         setGenreItems(genres);
         const normalized = genres
           .map(normalizeGenre)
@@ -184,29 +244,106 @@ const Home = () => {
             ? currentId
             : normalized[0]?.id ?? null,
         );
-      } else if (!controller.signal.aborted) {
-        messages.push(
-          `Genres could not be loaded: ${genresResult.reason instanceof Error ? genresResult.reason.message : "request failed"}`,
+      })
+      .catch((error) => {
+        if (!isCurrent) return;
+        setCatalogError(
+          error instanceof Error ? error.message : "Genres could not be loaded.",
+        );
+      })
+      .finally(() => {
+        if (isCurrent) setCatalogLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [catalogAttempt]);
+
+  useEffect(() => {
+    if (activeGenreId == null) {
+      setGenreResultsItems([]);
+      setGenreResultsRaw([]);
+      setGenreResultsLoading(false);
+      setGenreResultsError("");
+      return undefined;
+    }
+
+    let isCurrent = true;
+    const mediaType = browseType === "TV Show" ? "tv" : "movie";
+    setGenreResultsLoading(true);
+    setGenreResultsError("");
+
+    discover(mediaType, { genre: activeGenreId })
+      .then((response) => {
+        if (!isCurrent) return;
+        const items = responseItems(response);
+        setGenreResultsRaw(items);
+        setGenreResultsItems(items.map(normalizeMovie));
+      })
+      .catch((error) => {
+        if (!isCurrent) return;
+        setGenreResultsError(
+          error instanceof Error
+            ? error.message
+            : "Could not load titles for this genre.",
+        );
+      })
+      .finally(() => {
+        if (isCurrent) setGenreResultsLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [activeGenreId, browseType, genreResultsAttempt]);
+
+  useEffect(() => {
+    if (animationGenreId == null) {
+      setAnimeItems([]);
+      setAnimeLoading(false);
+      setAnimeError("");
+      return undefined;
+    }
+
+    let isCurrent = true;
+    setAnimeLoading(true);
+    setAnimeError("");
+
+    Promise.allSettled([
+      discover(
+        "movie",
+        { genre: animationGenreId },
+      ),
+      discover(
+        "tv",
+        { genre: animationGenreId },
+      ),
+    ]).then((results) => {
+      if (!isCurrent) return;
+
+      const items = results
+        .filter((result) => result.status === "fulfilled")
+        .flatMap((result) => responseItems(result.value));
+      setAnimeItems(items.map(normalizeMovie));
+
+      const failed = results.find(
+        (result) => result.status === "rejected",
+      );
+      if (failed) {
+        setAnimeError(
+          failed.reason instanceof Error
+            ? failed.reason.message
+            : "Could not load anime titles.",
         );
       }
-
-      setCatalogError(messages.join(" "));
-      setCatalogLoading(false);
-    };
-
-    loadCatalog().catch((error) => {
-      if (!isCurrent || controller.signal.aborted) return;
-      setCatalogError(
-        error instanceof Error ? error.message : "Could not load browse data.",
-      );
-      setCatalogLoading(false);
+      setAnimeLoading(false);
     });
 
     return () => {
       isCurrent = false;
-      controller.abort();
     };
-  }, [catalogAttempt]);
+  }, [animationGenreId, animeAttempt]);
 
   const selectGenre = (genreId) => {
     setActiveGenreId(genreId);
@@ -222,11 +359,8 @@ const Home = () => {
     });
   };
 
-  const openGenreResults = (genreName) => {
-    const filteredMovies = catalogItems.filter((movie) =>
-      matchesBrowseFilter(movie, genreName, browseType),
-    );
-    navigate("/filtered-movies", { state: { filteredMovies } });
+  const openGenreResults = () => {
+    navigate("/filtered-movies", { state: { filteredMovies: genreResultsRaw } });
   };
 
   const scrollCarousel = (ref, direction) => {
@@ -318,7 +452,7 @@ const Home = () => {
     const selectedMovie = repeatedTrendingItems[slotIndex];
     if (!selectedMovie) return;
     if (slotIndex === activeTrend) {
-      navigate(`/movies/${selectedMovie.id}`);
+      navigate(movieDetailPath(selectedMovie));
       return;
     }
     scrollToSlot(centerSlot + (slotIndex % trendingItems.length));
@@ -330,7 +464,7 @@ const Home = () => {
       navigate("/login");
       return;
     }
-    if (!username) {
+    if (!token) {
       setBookmarkError("Your account information is unavailable. Please sign in again.");
       return;
     }
@@ -338,7 +472,7 @@ const Home = () => {
     setBookmarkError("");
     setPendingBookmarkId(movie.id);
     try {
-      await addToWatchlist(username, movie.id);
+      await addToWatchlist(movie.id, movie.type || "movie", token);
       setSavedMovieIds((saved) => new Set(saved).add(movie.id));
     } catch (error) {
       setBookmarkError(
@@ -353,21 +487,23 @@ const Home = () => {
 
   const filteredJustAdded = justAddedItems.filter((movie) => {
     if (mediaFilter === "All") return true;
+    if (mediaFilter === "Series") return movie.type?.toLowerCase() === "tv";
     return movie.type?.toLowerCase() === mediaFilter.toLowerCase();
   });
 
   return (
     <div className="media-page-shell">
-      <Slider />
+      <Slider fallbackMovies={trendingItems} />
 
-      <section className="media-section" aria-labelledby="trending-title">
+      <section
+        id="trending"
+        className="media-section"
+        aria-labelledby="trending-title"
+      >
         <div className="section-header section-header--inline">
           <div>
             <span className="section-eyebrow">Trending</span>
             <h2 id="trending-title">Trending Today</h2>
-            <span className="section-subtitle">
-              {PREVIEW_MODE ? "Preview content · Not live trending data" : "Feed not connected"}
-            </span>
           </div>
           {trendingItems.length > 0 && (
             <div className="trending-controls" aria-label="Trending carousel controls">
@@ -388,6 +524,19 @@ const Home = () => {
             </div>
           )}
         </div>
+
+        {trendingError && (
+          <div className="catalog-error" role="alert">
+            <p>{trendingError}</p>
+            <button
+              type="button"
+              className="retry-button"
+              onClick={() => setTrendingAttempt((attempt) => attempt + 1)}
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         {trendingItems.length ? (
           <>
@@ -459,7 +608,7 @@ const Home = () => {
                         <button
                           type="button"
                           className="primary-action"
-                          onClick={() => navigate(`/movies/${movie.id}`)}
+                          onClick={() => navigate(movieDetailPath(movie))}
                           disabled={!movie.id}
                         >
                           Play
@@ -508,154 +657,198 @@ const Home = () => {
           </>
         ) : (
           <p className="section-empty">
-            Trending titles will appear when the trending feed is connected.
+            {trendingLoading
+              ? "Loading trending titles…"
+              : "Trending titles will appear when the trending feed is connected."}
           </p>
         )}
       </section>
 
-      {isAuthenticated && continueWatchingItems.length > 0 && (
-        <section className="media-section" aria-labelledby="continue-title">
-          <div className="section-header section-header--inline">
-            <div>
-              <span className="section-eyebrow">Continue</span>
-              <h2 id="continue-title">Continue Watching</h2>
-              {continueWatchingItems.length > 0 && (
-                <span className="section-subtitle">
-                  {continueWatchingItems.length} in progress
-                </span>
-              )}
+      {isAuthenticated &&
+        (continueWatchingItems.length > 0 || continueWatchingError) && (
+          <section className="media-section" aria-labelledby="continue-title">
+            <div className="section-header section-header--inline">
+              <div>
+                <span className="section-eyebrow">Continue</span>
+                <h2 id="continue-title">Continue Watching</h2>
+                {continueWatchingItems.length > 0 && (
+                  <span className="section-subtitle">
+                    {continueWatchingItems.length} in progress
+                  </span>
+                )}
+              </div>
             </div>
-            <span className="section-subtitle">Preview data</span>
-          </div>
 
-          <div className="continue-row" aria-label="Continue watching titles">
-            {continueWatchingItems.map((movie, index) => {
-              const timeLeft = getTimeLeft(movie);
-              return (
+            {continueWatchingError && (
+              <div className="catalog-error" role="alert">
+                <p>{continueWatchingError}</p>
                 <button
                   type="button"
-                  key={movie.id || `${movie.title}-${index}`}
-                  className="continue-card"
-                  onClick={() => navigate(`/movies/${movie.id}`)}
-                  disabled={!movie.id}
+                  className="retry-button"
+                  onClick={() =>
+                    setContinueWatchingAttempt((attempt) => attempt + 1)
+                  }
                 >
-                  {movie.poster && (
-                    <img src={movie.poster} alt={movie.title} loading="lazy" />
-                  )}
-                  <span className="continue-card-body">
-                    <span className="continue-card-head">
-                      <strong>{movie.title}</strong>
-                      {movie.episode && <span>{movie.episode}</span>}
-                    </span>
-                    {movie.progress != null && (
-                      <span
-                        className="progress-track"
-                        role="progressbar"
-                        aria-label={`${movie.title} progress`}
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                        aria-valuenow={Math.min(
-                          100,
-                          Math.max(0, Number(movie.progress)),
-                        )}
-                      >
-                        <span
-                          style={{
-                            width: `${Math.min(
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {continueWatchingItems.length > 0 && (
+              <div className="continue-row" aria-label="Continue watching titles">
+                {continueWatchingItems.map((movie, index) => {
+                  const timeLeft = getTimeLeft(movie);
+                  return (
+                    <button
+                      type="button"
+                      key={movie.id || `${movie.title}-${index}`}
+                      className="continue-card"
+                      onClick={() => navigate(movieDetailPath(movie))}
+                      disabled={!movie.id}
+                    >
+                      {movie.poster && (
+                        <img src={movie.poster} alt={movie.title} loading="lazy" />
+                      )}
+                      <span className="continue-card-body">
+                        <span className="continue-card-head">
+                          <strong>{movie.title}</strong>
+                          {movie.episode && <span>{movie.episode}</span>}
+                        </span>
+                        {movie.progress != null && (
+                          <span
+                            className="progress-track"
+                            role="progressbar"
+                            aria-label={`${movie.title} progress`}
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            aria-valuenow={Math.min(
                               100,
                               Math.max(0, Number(movie.progress)),
-                            )}%`,
-                          }}
-                        />
+                            )}
+                          >
+                            <span
+                              style={{
+                                width: `${Math.min(
+                                  100,
+                                  Math.max(0, Number(movie.progress)),
+                                )}%`,
+                              }}
+                            />
+                          </span>
+                        )}
+                        <span className="continue-meta-row">
+                          <span>
+                            {timeLeft == null
+                              ? "Progress unavailable"
+                              : `${timeLeft} min left`}
+                          </span>
+                          <span>{getMetaLine(movie)}</span>
+                        </span>
                       </span>
-                    )}
-                    <span className="continue-meta-row">
-                      <span>
-                        {timeLeft == null
-                          ? "Progress unavailable"
-                          : `${timeLeft} min left`}
-                      </span>
-                      <span>{getMetaLine(movie)}</span>
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
 
       <section className="media-section" aria-labelledby="added-title">
         <div className="section-header section-header--inline">
           <div>
             <span className="section-eyebrow">Fresh picks</span>
             <h2 id="added-title">Just Added</h2>
-            {PREVIEW_MODE && (
-              <span className="section-subtitle">Preview data</span>
-            )}
           </div>
-          <div className="filter-row" role="group" aria-label="Filter new titles">
-            {["All", "Movie", "Series"].map((filter) => (
-              <button
-                type="button"
-                key={filter}
-                className={`filter-pill${
-                  mediaFilter === filter ? " is-active" : ""
-                }`}
-                aria-pressed={mediaFilter === filter}
-                onClick={() => setMediaFilter(filter)}
-              >
-                {filter === "Movie" ? "Movies" : filter === "Series" ? "Series" : "All"}
-              </button>
-            ))}
+          <div className="just-added-header-actions">
+            <div className="filter-row" role="group" aria-label="Filter new titles">
+              {["All", "Movie", "Series"].map((filter) => (
+                <button
+                  type="button"
+                  key={filter}
+                  className={`filter-pill${
+                    mediaFilter === filter ? " is-active" : ""
+                  }`}
+                  aria-pressed={mediaFilter === filter}
+                  onClick={() => setMediaFilter(filter)}
+                >
+                  {filter === "Movie" ? "Movies" : filter === "Series" ? "Series" : "All"}
+                </button>
+              ))}
+            </div>
+            {filteredJustAdded.length > 1 && (
+              <div className="trending-controls just-added-controls" aria-label="Just Added carousel controls">
+                <button
+                  type="button"
+                  aria-label="Previous new title"
+                  onClick={() => scrollCarousel(justAddedRef, -1)}
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  aria-label="Next new title"
+                  onClick={() => scrollCarousel(justAddedRef, 1)}
+                >
+                  ›
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
+        {justAddedError && (
+          <div className="catalog-error" role="alert">
+            <p>{justAddedError}</p>
+            <button
+              type="button"
+              className="retry-button"
+              onClick={() => setJustAddedAttempt((attempt) => attempt + 1)}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         {filteredJustAdded.length ? (
-          <div className="just-added-grid">
+          <div
+            className="just-added-track"
+            ref={justAddedRef}
+            role="region"
+            aria-roledescription="carousel"
+            aria-label="Just Added titles"
+          >
             {filteredJustAdded.map((movie, index) => (
               <button
                 type="button"
                 key={movie.id || `${movie.title}-${index}`}
                 className="just-added-card"
-                onClick={() => navigate(`/movies/${movie.id}`)}
+                onClick={() => navigate(movieDetailPath(movie))}
                 disabled={!movie.id}
               >
-                <span className="just-added-image-wrap">
-                  {movie.poster && (
-                    <img src={movie.poster} alt="" loading="lazy" />
-                  )}
-                  {movie.type && (
-                    <span className="status-badge">{movie.type}</span>
-                  )}
-                </span>
+                {movie.poster && (
+                  <img src={movie.poster} alt="" loading="lazy" />
+                )}
+                <span className="trending-card-overlay" aria-hidden="true" />
                 <span className="just-added-content">
-                  <span className="just-added-topline">
-                    <span className="mini-label">{movie.genre?.[0] || ""}</span>
-                    {movie.rating != null && (
-                      <span className="mini-rating">
-                        TMDB {Number(movie.rating).toFixed(1)}
-                      </span>
-                    )}
-                  </span>
+                  {movie.type && (
+                    <span className="trend-type-pill">{movie.type}</span>
+                  )}
                   <span className="just-added-title">{movie.title}</span>
-                  {movie.description && (
-                    <span className="just-added-description">
-                      {movie.description}
+                  {(movie.year || movie.rating != null) && (
+                    <span className="trend-meta-row">
+                      {[movie.year, movie.rating == null ? null : `TMDB ${Number(movie.rating).toFixed(1)}`]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </span>
                   )}
-                  <span className="just-added-footer">
-                    {movie.year && <span>{movie.year}</span>}
-                    {movie.type && <span>{movie.type}</span>}
-                  </span>
                 </span>
               </button>
             ))}
           </div>
         ) : (
           <p className="section-empty">
-            {PREVIEW_MODE
-              ? "No preview titles match this filter."
+            {justAddedLoading
+              ? "Loading new releases…"
               : "New releases will appear when the latest titles feed is connected."}
           </p>
         )}
@@ -676,7 +869,20 @@ const Home = () => {
           </button>
         </div>
 
-        {catalogLoading ? (
+        {animeError && (
+          <div className="catalog-error" role="alert">
+            <p>{animeError}</p>
+            <button
+              type="button"
+              className="retry-button"
+              onClick={() => setAnimeAttempt((attempt) => attempt + 1)}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {animeLoading ? (
           <div className="anime-row" aria-label="Loading anime titles">
             {Array.from({ length: 3 }).map((_, index) => (
               <div
@@ -695,7 +901,7 @@ const Home = () => {
                 type="button"
                 key={movie.id ?? `${movie.title}-${index}`}
                 className="anime-card"
-                onClick={() => movie.id && navigate(`/movies/${movie.id}`)}
+                onClick={() => movie.id && navigate(movieDetailPath(movie))}
                 disabled={!movie.id}
               >
                 {movie.poster && (
@@ -750,7 +956,7 @@ const Home = () => {
               <button
                 type="button"
                 className="browse-genre-link"
-                onClick={() => openGenreResults(activeGenre.name)}
+                onClick={() => openGenreResults()}
               >
                 Browse {activeGenre.name} <span aria-hidden="true">↗</span>
               </button>
@@ -801,7 +1007,7 @@ const Home = () => {
             >
               {normalizedGenres.map((genre) => {
                 const isActive = genre.id === (activeGenre?.id ?? activeGenreId);
-                const representative = normalizedCatalog.find(
+                const representative = representativePool.find(
                   (movie) =>
                     movie.poster &&
                     movie.genre.some(
@@ -822,14 +1028,8 @@ const Home = () => {
                     )}
                     <span className="genre-card-overlay" aria-hidden="true" />
                     <span className="genre-card-copy">
-                      <span className="genre-card-tagline">
-                        {genreTagline(genre.name)}
-                      </span>
                       <strong>{genre.name}</strong>
                     </span>
-                    {isActive && (
-                      <span className="genre-showing">Showing</span>
-                    )}
                   </button>
                 );
               })}
@@ -860,14 +1060,27 @@ const Home = () => {
             <button
               type="button"
               className="section-link"
-              onClick={() => openGenreResults(activeGenre.name)}
+              onClick={() => openGenreResults()}
             >
               View all
             </button>
           )}
         </div>
 
-        {catalogLoading ? (
+        {genreResultsError && (
+          <div className="catalog-error" role="alert">
+            <p>{genreResultsError}</p>
+            <button
+              type="button"
+              className="retry-button"
+              onClick={() => setGenreResultsAttempt((attempt) => attempt + 1)}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {genreResultsLoading ? (
           <div className="genre-results-track" aria-label="Loading titles">
             {Array.from({ length: 2 }).map((_, index) => (
               <div
@@ -879,7 +1092,7 @@ const Home = () => {
               </div>
             ))}
           </div>
-        ) : genreResults.length ? (
+        ) : genreResultsItems.length ? (
           <div className="browse-carousel">
             <button
               type="button"
@@ -895,12 +1108,12 @@ const Home = () => {
               role="region"
               aria-label="Titles in the selected genre"
             >
-              {genreResults.map((movie, index) => (
+              {genreResultsItems.map((movie, index) => (
                 <button
                   type="button"
                   key={movie.id ?? `${movie.title}-${index}`}
                   className="genre-result-card"
-                  onClick={() => movie.id && navigate(`/movies/${movie.id}`)}
+                  onClick={() => movie.id && navigate(movieDetailPath(movie))}
                   disabled={!movie.id}
                 >
                   {movie.poster && (
@@ -916,7 +1129,7 @@ const Home = () => {
               <button
                 type="button"
                 className="genre-view-all-card"
-                onClick={() => activeGenre && openGenreResults(activeGenre.name)}
+                onClick={() => activeGenre && openGenreResults()}
               >
                 <span>View all</span>
                 <span aria-hidden="true">↗</span>
@@ -933,11 +1146,9 @@ const Home = () => {
           </div>
         ) : (
           <p className="section-empty">
-            {catalogLoading
-              ? "Loading titles…"
-              : activeGenre
-                ? `No ${browseType.toLowerCase()} titles are listed for ${activeGenre.name}.`
-                : "Choose a genre to browse its titles."}
+            {activeGenre
+              ? `No ${browseType.toLowerCase()} titles are listed for ${activeGenre.name}.`
+              : "Choose a genre to browse its titles."}
           </p>
         )}
       </section>

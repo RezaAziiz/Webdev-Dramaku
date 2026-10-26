@@ -1,0 +1,167 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    
+<style>
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: 48px;
+    background: #f5ebdc;
+    font-family: Arial, sans-serif;
+  }
+
+  .wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 24px;
+    max-width: 1100px;
+  }
+
+  .group h3 {
+    margin: 0 0 12px;
+    font-size: 18px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #d4511a;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 8px;
+  }
+
+  .item {
+    width: 76px;
+    flex-shrink: 0;
+    text-align: center;
+  }
+
+  .item img {
+    width: 64px;
+    height: 64px;
+    display: block;
+    margin: 0 auto 6px;
+  }
+
+  .item span {
+    font-size: 12px;
+    color: #3a2a1a;
+    font-weight: bold;
+  }
+
+  .db-infra {
+    display: flex;
+    align-items: flex-start;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 600px) {
+    body {
+      padding: 24px;
+    }
+
+    .db-infra {
+      gap: 24px;
+    }
+  }
+</style>
+
+<div class="wrap" id="app">
+  <section class="group" id="backend"></section>
+  <section class="group" id="frontend"></section>
+
+  <div class="db-infra">
+    <section class="group" id="database"></section>
+    <section class="group" id="infra"></section>
+  </div>
+
+  <section class="group" id="tools"></section>
+</div>
+
+    <script>
+      const groups = {
+        backend: {
+          title: "Backend",
+          items: [
+            ["nodejs", "Node.js"],
+            ["nestjs", "NestJS"],
+            ["python", "Python"],
+            ["fastapi", "FastAPI"],
+            ["java", "Java"],
+            ["spring", "Spring Boot"],
+          ],
+        },
+
+        frontend: {
+          title: "Frontend",
+          items: [
+            ["js", "JavaScript"],
+            ["ts", "TypeScript"],
+            ["vue", "Vue.js"],
+            ["react", "React"],
+            ["tailwind", "Tailwind CSS"],
+            ["html", "HTML"],
+            ["css", "CSS"],
+          ],
+        },
+
+        database: {
+          title: "Database",
+          items: [
+            ["mysql", "MySQL"],
+            ["postgres", "PostgreSQL"],
+            ["mongodb", "MongoDB"],
+          ],
+        },
+
+        infra: {
+          title: "Infra & Cloud",
+          items: [
+            ["docker", "Docker"],
+            ["aws", "AWS"],
+            ["gcp", "Google Cloud"],
+          ],
+        },
+
+        tools: {
+          title: "Tools",
+          items: [
+            ["git", "Git"],
+            ["postman", "Postman"],
+          ],
+        },
+      };
+
+      for (const [key, group] of Object.entries(groups)) {
+        const container = document.getElementById(key);
+
+        container.innerHTML = `
+          <h3>${group.title}</h3>
+          <div class="row">
+            ${group.items
+              .map(
+                ([id, label]) => `
+                  <div class="item">
+                    <img
+                      src="https://skillicons.dev/icons?i=${id}&theme=light"
+                      alt="${label}"
+                    />
+                    <span>${label}</span>
+                  </div>
+                `,
+              )
+              .join("")}
+          </div>
+        `;
+      }
+    </script>
+  </body>
+</html>

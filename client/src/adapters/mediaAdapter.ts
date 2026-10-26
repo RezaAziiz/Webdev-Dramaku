@@ -9,6 +9,7 @@ export type MediaItem = {
   rating: number | null;
   type: string | null;
   genre: string[];
+  palette: MediaPalette | null;
   language: string | null;
   countries: string[];
   runtime: number | null;
@@ -20,6 +21,12 @@ export type MediaItem = {
 export type GenreItem = {
   id: string | number;
   name: string;
+};
+
+export type MediaPalette = {
+  dominant: string | null;
+  tint: string | null;
+  accent: string | null;
 };
 
 const asString = (value: unknown): string | null =>
@@ -61,6 +68,16 @@ const asLabels = (value: unknown): string[] => {
     .filter((label): label is string => label !== null);
 };
 
+const asPalette = (value: unknown): MediaPalette | null => {
+  if (!value || typeof value !== "object") return null;
+  const palette = value as Record<string, unknown>;
+  return {
+    dominant: asString(palette.dominant),
+    tint: asString(palette.tint),
+    accent: asString(palette.accent),
+  };
+};
+
 export const normalizeMovie = (movie: RawMedia): MediaItem => {
   const releaseDate = asString(movie.release_date);
   const rawYear = movie.year ?? movie.releaseYear;
@@ -90,8 +107,9 @@ export const normalizeMovie = (movie: RawMedia): MediaItem => {
       "",
     year,
     rating: asNumber(movie.rating ?? movie.vote_average),
-    type: asString(movie.type),
+    type: asString(movie.type) ?? asString(movie.media_type),
     genre: asGenres(rawGenre),
+    palette: asPalette(movie.palette),
     language: asLabel(
       movie.language ?? movie.original_language ?? movie.originalLanguage,
     ),

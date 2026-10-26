@@ -2,13 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { normalizeGenre, normalizeMovie } from "../adapters/mediaAdapter";
 import { getGenres } from "../services/catalogService";
-import {
-  getAllMovies,
-  getSuggestions,
-  searchMovies,
-} from "../services/movieService";
+import { discover, searchMovies } from "../services/movieService";
 
-const PAGE_SIZE = 18;
 const SORT_OPTIONS = [
   { value: "relevance", label: "Relevant" },
   { value: "year", label: "Release year" },
@@ -54,8 +49,15 @@ const rawYear = (movie) => {
   return /^\d{4}/.test(year) ? year.slice(0, 4) : "";
 };
 
-const getMovieHref = (movie) =>
-  movie.id === null ? null : `/movies/${encodeURIComponent(movie.id)}`;
+const getMovieHref = (movie) => {
+  if (movie.id === null) return null;
+  const type = ["tv", "series", "tv show", "show"].includes(
+    String(movie.type || "").trim().toLowerCase(),
+  )
+    ? "tv"
+    : "movie";
+  return `/movies/${type}/${encodeURIComponent(movie.id)}`;
+};
 
 const FilterFields = ({ values, options, onChange }) => (
   <div className="discover-filter-fields">
@@ -205,14 +207,23 @@ const SearchResult = () => {
   };
 
   const [catalog, setCatalog] = useState([]);
+  const [catalogPage, setCatalogPage] = useState(1);
+  const [catalogTotalPages, setCatalogTotalPages] = useState(1);
   const [genres, setGenres] = useState([]);
+  const [genreAttempt, setGenreAttempt] = useState(0);
   const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogLoadingMore, setCatalogLoadingMore] = useState(false);
   const [catalogError, setCatalogError] = useState("");
+  const [genresError, setGenresError] = useState("");
   const [catalogUnavailable, setCatalogUnavailable] = useState(false);
   const [catalogAttempt, setCatalogAttempt] = useState(0);
   const [searchItems, setSearchItems] = useState([]);
+  const [searchPage, setSearchPage] = useState(1);
+  const [searchTotalPages, setSearchTotalPages] = useState(1);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [searchLoadingMore, setSearchLoadingMore] = useState(false);
   const [searchError, setSearchError] = useState("");
+  const [paginationError, setPaginationError] = useState("");
   const [searchUnavailable, setSearchUnavailable] = useState(false);
   const [searchAttempt, setSearchAttempt] = useState(0);
   const [inputValue, setInputValue] = useState(term);
@@ -223,8 +234,8 @@ const SearchResult = () => {
   const [suggestionIndex, setSuggestionIndex] = useState(-1);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [draftFilters, setDraftFilters] = useState(appliedFilters);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const loadMoreRef = useRef(null);
+  const pageRequestRef = useRef(null);
 
   useEffect(() => {
     setInputValue(term);
@@ -233,65 +244,114 @@ const SearchResult = () => {
   }, [term]);
 
   useEffect(() => {
-    const controller = new AbortController();
     let current = true;
-    setCatalogLoading(true);
-    setCatalogError("");
-    setCatalogUnavailable(false);
+    setGenresError("");
 
-    Promise.allSettled([
-      getAllMovies({ signal: controller.signal }),
-      getGenres({ signal: controller.signal }),
-    ]).then((results) => {
-      if (!current) return;
-      const [moviesResult, genresResult] = results;
-      const errors = [];
-      if (moviesResult.status === "fulfilled") {
-        setCatalog(responseItems(moviesResult.value));
-      } else if (!controller.signal.aborted) {
-        setCatalogUnavailable(true);
-        errors.push(`Catalog unavailable: ${errorMessage(moviesResult.reason)}`);
-      }
-      if (genresResult.status === "fulfilled") {
+    getGenres()
+      .then((response) => {
+        if (!current) return;
         setGenres(
-          responseItems(genresResult.value)
+          responseItems(response)
             .filter((genre) => genre && typeof genre === "object")
             .map(normalizeGenre)
             .filter((genre) => genre !== null),
         );
-      } else if (!controller.signal.aborted) {
-        errors.push(`Genres unavailable: ${errorMessage(genresResult.reason)}`);
-      }
-      setCatalogError(errors.join(" "));
-      setCatalogLoading(false);
-    });
+      })
+      .catch((error) => {
+        if (current) {
+          setGenresError(`Genres unavailable: ${errorMessage(error)}`);
+        }
+      });
 
     return () => {
       current = false;
-      controller.abort();
     };
-  }, [catalogAttempt]);
+  }, [genreAttempt]);
+
+  useEffect(() => {
+    if (term) return undefined;
+
+    let current = true;
+    setCatalogLoading(true);
+    setCatalogError("");
+    setCatalogUnavailable(false);
+    setCatalog([]);
+    setCatalogPage(1);
+    setCatalogTotalPages(1);
+
+    const mediaType = selectedType === "movie" ? "movie" : "tv";
+    const genreId =
+      genres.find(
+        (genre) =>
+          genre.name.toLowerCase() === appliedFilters.genre.toLowerCase(),
+      )?.id ?? appliedFilters.genre;
+
+    discover(
+      mediaType,
+      {
+        genre: genreId,
+        year: appliedFilters.year,
+        language: appliedFilters.language,
+        country: appliedFilters.country,
+        minRating: appliedFilters.rating,
+        page: 1,
+      },
+    )
+      .then((response) => {
+        if (!current) return;
+        setCatalog(responseItems(response));
+        setCatalogTotalPages(Number(response?.total_pages) || 1);
+      })
+      .catch((error) => {
+        if (!current) return;
+        setCatalogUnavailable(true);
+        setCatalogError(`Catalog unavailable: ${errorMessage(error)}`);
+      })
+      .finally(() => {
+        if (current) setCatalogLoading(false);
+      });
+
+    return () => {
+      current = false;
+    };
+  }, [
+    term,
+    selectedType,
+    appliedFilters.genre,
+    appliedFilters.year,
+    appliedFilters.language,
+    appliedFilters.country,
+    appliedFilters.rating,
+    catalogAttempt,
+    genres,
+  ]);
 
   useEffect(() => {
     if (!term) {
       setSearchItems([]);
       setSearchError("");
       setSearchLoading(false);
+      setSearchPage(1);
+      setSearchTotalPages(1);
       return undefined;
     }
 
-    const controller = new AbortController();
     let current = true;
     setSearchLoading(true);
     setSearchError("");
     setSearchUnavailable(false);
+    setSearchItems([]);
+    setSearchPage(1);
+    setSearchTotalPages(1);
 
-    searchMovies(term, { signal: controller.signal })
+    searchMovies(term, { page: 1 })
       .then((response) => {
-        if (current) setSearchItems(responseItems(response));
+        if (!current) return;
+        setSearchItems(responseItems(response));
+        setSearchTotalPages(Number(response?.total_pages) || 1);
       })
       .catch((error) => {
-        if (!current || controller.signal.aborted) return;
+        if (!current) return;
         setSearchUnavailable(true);
         setSearchError(`Search failed: ${errorMessage(error)}`);
       })
@@ -301,7 +361,6 @@ const SearchResult = () => {
 
     return () => {
       current = false;
-      controller.abort();
     };
   }, [term, searchAttempt]);
 
@@ -314,34 +373,35 @@ const SearchResult = () => {
       return undefined;
     }
 
-    const controller = new AbortController();
+    let current = true;
     const timeoutId = window.setTimeout(() => {
       setSuggestionsLoading(true);
       setSuggestionsError("");
-      getSuggestions(value, { signal: controller.signal })
+      searchMovies(value, { page: 1 })
         .then((response) => {
-          if (controller.signal.aborted) return;
+          if (!current) return;
           setSuggestions(
             responseItems(response)
               .filter((item) => item && typeof item === "object")
               .map(normalizeMovie)
-              .filter((item) => item.title),
+              .filter((item) => item.title)
+              .slice(0, 6),
           );
         })
         .catch((error) => {
-          if (controller.signal.aborted) return;
+          if (!current) return;
           setSuggestionsError(
             `Suggestions unavailable: ${errorMessage(error)}`,
           );
         })
         .finally(() => {
-          if (!controller.signal.aborted) setSuggestionsLoading(false);
+          if (current) setSuggestionsLoading(false);
         });
     }, 280);
 
     return () => {
       window.clearTimeout(timeoutId);
-      controller.abort();
+      current = false;
     };
   }, [inputValue, suggestionAttempt, term]);
 
@@ -384,10 +444,6 @@ const SearchResult = () => {
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [filterSheetOpen]);
 
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [location.search]);
-
   const normalizedCatalog = useMemo(
     () =>
       catalog
@@ -423,12 +479,10 @@ const SearchResult = () => {
 
   const filteredItems = useMemo(() => {
     const source = term ? normalizedSearchItems : normalizedCatalog;
-    const needle = term.toLowerCase();
     const result = source.filter((movie) => {
-      if (!matchesType(movie, selectedType)) return false;
       if (
-        needle &&
-        !`${movie.title} ${movie.description}`.toLowerCase().includes(needle)
+        (selectedType === "anime" || term) &&
+        !matchesType(movie, selectedType)
       ) {
         return false;
       }
@@ -476,15 +530,6 @@ const SearchResult = () => {
       );
     } else if (selectedSort === "title") {
       result.sort((a, b) => a.title.localeCompare(b.title));
-    } else if (needle) {
-      const score = (title) => {
-        const normalizedTitle = title.toLowerCase();
-        if (normalizedTitle === needle) return 0;
-        if (normalizedTitle.startsWith(needle)) return 1;
-        if (normalizedTitle.includes(needle)) return 2;
-        return 3;
-      };
-      result.sort((a, b) => score(a.title) - score(b.title));
     }
     return result;
   }, [
@@ -496,28 +541,100 @@ const SearchResult = () => {
     term,
   ]);
 
+  const hasMore = term ? searchPage < searchTotalPages : catalogPage < catalogTotalPages;
+  const loadingMore = term ? searchLoadingMore : catalogLoadingMore;
+
+  useEffect(() => {
+    pageRequestRef.current = null;
+    setCatalogLoadingMore(false);
+    setSearchLoadingMore(false);
+    setPaginationError("");
+    return () => {
+      pageRequestRef.current = null;
+    };
+  }, [location.search]);
+
+  const loadMoreResults = async () => {
+    if (
+      (term && (searchLoadingMore || searchPage >= searchTotalPages)) ||
+      (!term && (catalogLoadingMore || catalogPage >= catalogTotalPages))
+    ) {
+      return;
+    }
+    const requestId = {};
+    pageRequestRef.current = requestId;
+    setPaginationError("");
+
+    if (term) {
+      const nextPage = searchPage + 1;
+      setSearchLoadingMore(true);
+      try {
+        const response = await searchMovies(
+          term,
+          { page: nextPage },
+        );
+        if (pageRequestRef.current !== requestId) return;
+        setSearchItems((current) => [...current, ...responseItems(response)]);
+        setSearchPage(nextPage);
+        setSearchTotalPages(Number(response?.total_pages) || nextPage);
+      } catch (error) {
+        if (pageRequestRef.current === requestId) {
+          setPaginationError(`Could not load more search results: ${errorMessage(error)}`);
+        }
+      } finally {
+        if (pageRequestRef.current === requestId) setSearchLoadingMore(false);
+      }
+      return;
+    }
+
+    const nextPage = catalogPage + 1;
+    setCatalogLoadingMore(true);
+    const mediaType = selectedType === "movie" ? "movie" : "tv";
+    const genreId =
+      genres.find(
+        (genre) =>
+          genre.name.toLowerCase() === appliedFilters.genre.toLowerCase(),
+      )?.id ?? appliedFilters.genre;
+    try {
+      const response = await discover(
+        mediaType,
+        {
+          genre: genreId,
+          year: appliedFilters.year,
+          language: appliedFilters.language,
+          country: appliedFilters.country,
+          minRating: appliedFilters.rating,
+          page: nextPage,
+        },
+      );
+      if (pageRequestRef.current !== requestId) return;
+      setCatalog((current) => [...current, ...responseItems(response)]);
+      setCatalogPage(nextPage);
+      setCatalogTotalPages(Number(response?.total_pages) || nextPage);
+    } catch (error) {
+      if (pageRequestRef.current === requestId) {
+        setPaginationError(`Could not load more titles: ${errorMessage(error)}`);
+      }
+    } finally {
+      if (pageRequestRef.current === requestId) setCatalogLoadingMore(false);
+    }
+  };
+
   useEffect(() => {
     const sentinel = loadMoreRef.current;
-    if (
-      !sentinel ||
-      visibleCount >= filteredItems.length ||
-      typeof IntersectionObserver === "undefined"
-    ) {
+    if (!sentinel || !hasMore || typeof IntersectionObserver === "undefined") {
       return undefined;
     }
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisibleCount((count) =>
-            Math.min(count + PAGE_SIZE, filteredItems.length),
-          );
-        }
+        if (entry.isIntersecting) loadMoreResults();
       },
       { rootMargin: "240px" },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [filteredItems.length, visibleCount]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMore, loadingMore]);
 
   const updateQuery = (updates, replace = true) => {
     const params = new URLSearchParams(location.search);
@@ -582,7 +699,7 @@ const SearchResult = () => {
   };
 
   const activeFilterCount = Object.values(appliedFilters).filter(Boolean).length;
-  const visibleItems = filteredItems.slice(0, visibleCount);
+  const visibleItems = filteredItems;
   const titleBySort = {
     relevance: "Discover",
     year: "Release year",
@@ -871,14 +988,15 @@ const SearchResult = () => {
           )}
         </div>
 
-        {(catalogError || searchError) && (
+        {(catalogError || searchError || genresError) && (
           <div className="discover-error" role="alert">
-            <p>{[catalogError, searchError].filter(Boolean).join(" ")}</p>
+          <p>{[catalogError, searchError, genresError].filter(Boolean).join(" ")}</p>
             <button
               type="button"
               onClick={() => {
                 if (catalogError) setCatalogAttempt((attempt) => attempt + 1);
                 if (searchError) setSearchAttempt((attempt) => attempt + 1);
+                if (genresError) setGenreAttempt((attempt) => attempt + 1);
               }}
             >
               Retry
@@ -904,6 +1022,15 @@ const SearchResult = () => {
           </div>
         )}
 
+        {paginationError && (
+          <div className="discover-error" role="alert">
+            <p>{paginationError}</p>
+            <button type="button" onClick={loadMoreResults}>
+              Retry
+            </button>
+          </div>
+        )}
+
         {!catalogLoading && !searchLoading && canRenderResults ? (
           <>
             {filteredItems.length > 0 ? (
@@ -917,7 +1044,7 @@ const SearchResult = () => {
                         movie={movie}
                       />
                     ))}
-                    {visibleCount < filteredItems.length && (
+                    {hasMore && (
                       <div
                         ref={loadMoreRef}
                         className="discover-load-sentinel"
@@ -926,17 +1053,14 @@ const SearchResult = () => {
                     )}
                   </div>
                 )}
-                {visibleCount < filteredItems.length && (
+                {hasMore && (
                   <button
                     type="button"
                     className="discover-load-more"
-                    onClick={() =>
-                      setVisibleCount((count) =>
-                        Math.min(count + PAGE_SIZE, filteredItems.length),
-                      )
-                    }
+                    onClick={loadMoreResults}
+                    disabled={loadingMore}
                   >
-                    Load more
+                    {loadingMore ? "Loading…" : "Load more"}
                   </button>
                 )}
               </>

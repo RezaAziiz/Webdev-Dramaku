@@ -1,10 +1,12 @@
 import { httpClient } from "./httpClient";
 
-export const getWatchlist = (username) =>
-  httpClient.get(`/api/watchlist/${username}`);
+// All watchlist endpoints are now auth-based: the server derives the user
+// from the JWT instead of trusting a username/id passed by the client.
+export const getWatchlist = (token, options) =>
+  httpClient.get("/api/watchlist", { ...options, token });
 
-export const addToWatchlist = (username, movieId) =>
-  httpClient.post("/api/watchlist", { username, movieId });
+export const addToWatchlist = (tmdbId, mediaType, token) =>
+  httpClient.post("/api/watchlist", { tmdbId, mediaType }, { token });
 
-export const removeFromWatchlist = (username, movieId) =>
-  httpClient.delete(`/api/watchlist/${username}/${movieId}`);
+export const removeFromWatchlist = (tmdbId, mediaType, token) =>
+  httpClient.delete(`/api/watchlist/${mediaType}/${tmdbId}`, { token });

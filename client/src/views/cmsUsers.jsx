@@ -77,7 +77,7 @@ const Users = () => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ role_id: "Admin" }), // Change role to Admin
+          body: JSON.stringify({ role: "Admin" }), // Change role to Admin
         });
 
         if (response.ok) {
