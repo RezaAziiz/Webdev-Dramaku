@@ -2,13 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { normalizeGenre, normalizeMovie } from "../adapters/mediaAdapter";
 import { getGenres } from "../services/catalogService";
-import { discover, searchMovies } from "../services/movieService";
+import { discover, getTrending, searchMovies } from "../services/movieService";
 
 const SORT_OPTIONS = [
-  { value: "relevance", label: "Relevant" },
-  { value: "year", label: "Release year" },
-  { value: "rating", label: "TMDB rating" },
-  { value: "title", label: "Title A–Z" },
+  { value: "relevance", label: "Most Popular" },
+  { value: "trending", label: "Trending This Week" },
+  { value: "year", label: "Newest First" },
+  { value: "rating", label: "Top Rated" },
 ];
 const TYPE_OPTIONS = [
   { value: "movie", label: "Movies" },
@@ -44,16 +44,34 @@ const matchesType = (movie, type) => {
   return !itemType || ["movie", "film"].includes(itemType);
 };
 
+const suggestionTypeLabel = (movie) => {
+  if (movie.genre.some((genre) => genre.toLowerCase() === "anime")) {
+    return "Anime";
+  }
+  return normalizedType(movie) === "tv" ? "TV" : "Movie";
+};
+
 const rawYear = (movie) => {
   const year = movie.year == null ? "" : String(movie.year);
   return /^\d{4}/.test(year) ? year.slice(0, 4) : "";
 };
 
+const toArtworkUrl = (image) => {
+  if (typeof image !== "string" || !image.trim()) return "";
+  if (image.startsWith("/")) {
+    return `https://image.tmdb.org/t/p/original${image}`;
+  }
+  return image.replace(
+    /(image\.tmdb\.org\/t\/p\/)(?:w\d+|h\d+|original)(\/)/,
+    "$1original$2",
+  );
+};
+
 const getMovieHref = (movie) => {
   if (movie.id === null) return null;
-  const type = ["tv", "series", "tv show", "show"].includes(
-    String(movie.type || "").trim().toLowerCase(),
-  )
+  const mediaType = String(movie.type || "").trim().toLowerCase();
+  const type = ["tv", "series", "tv show", "show", "anime"].includes(mediaType) ||
+    movie.genre.some((genre) => genre.toLowerCase() === "anime")
     ? "tv"
     : "movie";
   return `/movies/${type}/${encodeURIComponent(movie.id)}`;
@@ -130,13 +148,20 @@ const FilterFields = ({ values, options, onChange }) => (
   </div>
 );
 
-const MediaCard = ({ movie, featured = false }) => {
+const MediaCard = ({ movie }) => {
   const href = getMovieHref(movie);
+  const artwork = movie.backdrop || movie.poster;
   const content = (
     <>
-      <div className="discover-card-art">
-        {movie.poster ? (
-          <img src={movie.poster} alt={`${movie.title} poster`} loading="lazy" />
+      <div
+        className={`discover-card-art${movie.backdrop ? "" : " is-poster-fallback"}`}
+      >
+        {artwork ? (
+          <img
+            src={toArtworkUrl(artwork)}
+            alt={`${movie.title} artwork`}
+            loading="lazy"
+          />
         ) : (
           <span aria-hidden="true" />
         )}
@@ -150,8 +175,7 @@ const MediaCard = ({ movie, featured = false }) => {
           )}
         </div>
         <h3>{movie.title}</h3>
-        {featured && movie.description && <p>{movie.description}</p>}
-        {!featured && movie.genre.length > 0 && (
+        {movie.genre.length > 0 && (
           <span className="discover-card-genres">{movie.genre.join(" · ")}</span>
         )}
       </div>
@@ -160,14 +184,14 @@ const MediaCard = ({ movie, featured = false }) => {
 
   if (!href) {
     return (
-      <article className={`discover-card${featured ? " is-featured" : ""}`}>
+      <article className="discover-card">
         {content}
       </article>
     );
   }
   return (
     <Link
-      className={`discover-card${featured ? " is-featured" : ""}`}
+      className="discover-card"
       to={href}
       aria-label={`View ${movie.title} details`}
     >
@@ -180,6 +204,8 @@ const SearchResult = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const searchFieldRef = useRef(null);
+  const searchFormRef = useRef(null);
+  const suggestionsDismissedRef = useRef(false);
   const sheetTriggerRef = useRef(null);
   const filterSheetRef = useRef(null);
   const wasSheetOpen = useRef(false);
@@ -198,8 +224,9 @@ const SearchResult = () => {
   )
     ? query.get("sort")
     : "relevance";
+  const selectedGenres = (query.get("genre") ?? "").split(",").filter(Boolean);
   const appliedFilters = {
-    genre: query.get("genre") ?? "",
+    genre: selectedGenres,
     year: query.get("year") ?? "",
     language: query.get("language") ?? "",
     rating: query.get("rating") ?? "",
@@ -207,6 +234,7 @@ const SearchResult = () => {
   };
 
   const [catalog, setCatalog] = useState([]);
+  const [trendingCatalog, setTrendingCatalog] = useState([]);
   const [catalogPage, setCatalogPage] = useState(1);
   const [catalogTotalPages, setCatalogTotalPages] = useState(1);
   const [genres, setGenres] = useState([]);
@@ -241,7 +269,24 @@ const SearchResult = () => {
     setInputValue(term);
     setSuggestions([]);
     setSuggestionIndex(-1);
+    suggestionsDismissedRef.current = true;
   }, [term]);
+
+  useEffect(() => {
+    const closeOnOutsideClick = (event) => {
+      if (
+        searchFormRef.current &&
+        !searchFormRef.current.contains(event.target)
+      ) {
+        suggestionsDismissedRef.current = true;
+        setSuggestions([]);
+        setSuggestionIndex(-1);
+      }
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    return () =>
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+  }, []);
 
   useEffect(() => {
     let current = true;
@@ -269,7 +314,11 @@ const SearchResult = () => {
   }, [genreAttempt]);
 
   useEffect(() => {
-    if (term) return undefined;
+    if (term) {
+      setCatalogLoading(false);
+      return undefined;
+    }
+    if (selectedSort === "trending") return undefined;
 
     let current = true;
     setCatalogLoading(true);
@@ -280,16 +329,20 @@ const SearchResult = () => {
     setCatalogTotalPages(1);
 
     const mediaType = selectedType === "movie" ? "movie" : "tv";
-    const genreId =
-      genres.find(
-        (genre) =>
-          genre.name.toLowerCase() === appliedFilters.genre.toLowerCase(),
-      )?.id ?? appliedFilters.genre;
+    const genreIds = selectedGenres
+      .map(
+        (name) =>
+          genres.find(
+            (genre) => genre.name.toLowerCase() === name.toLowerCase(),
+          )?.id,
+      )
+      .filter((id) => id !== undefined)
+      .join("|");
 
     discover(
       mediaType,
       {
-        genre: genreId,
+        genre: genreIds,
         year: appliedFilters.year,
         language: appliedFilters.language,
         country: appliedFilters.country,
@@ -303,7 +356,7 @@ const SearchResult = () => {
         setCatalogTotalPages(Number(response?.total_pages) || 1);
       })
       .catch((error) => {
-        if (!current) return;
+        if (!current || suggestionsDismissedRef.current) return;
         setCatalogUnavailable(true);
         setCatalogError(`Catalog unavailable: ${errorMessage(error)}`);
       })
@@ -317,7 +370,8 @@ const SearchResult = () => {
   }, [
     term,
     selectedType,
-    appliedFilters.genre,
+    selectedSort,
+    selectedGenres.join(","),
     appliedFilters.year,
     appliedFilters.language,
     appliedFilters.country,
@@ -325,6 +379,38 @@ const SearchResult = () => {
     catalogAttempt,
     genres,
   ]);
+
+  useEffect(() => {
+    if (term || selectedSort !== "trending") {
+      setTrendingCatalog([]);
+      if (term) setCatalogLoading(false);
+      return undefined;
+    }
+
+    suggestionsDismissedRef.current = false;
+    let current = true;
+    setCatalogLoading(true);
+    setCatalogError("");
+    setCatalogUnavailable(false);
+    setTrendingCatalog([]);
+
+    getTrending()
+      .then((response) => {
+        if (current) setTrendingCatalog(responseItems(response));
+      })
+      .catch((error) => {
+        if (!current) return;
+        setCatalogUnavailable(true);
+        setCatalogError(`Trending titles unavailable: ${errorMessage(error)}`);
+      })
+      .finally(() => {
+        if (current) setCatalogLoading(false);
+      });
+
+    return () => {
+      current = false;
+    };
+  }, [term, selectedSort, catalogAttempt]);
 
   useEffect(() => {
     if (!term) {
@@ -373,13 +459,14 @@ const SearchResult = () => {
       return undefined;
     }
 
+    suggestionsDismissedRef.current = false;
     let current = true;
     const timeoutId = window.setTimeout(() => {
       setSuggestionsLoading(true);
       setSuggestionsError("");
       searchMovies(value, { page: 1 })
         .then((response) => {
-          if (!current) return;
+          if (!current || suggestionsDismissedRef.current) return;
           setSuggestions(
             responseItems(response)
               .filter((item) => item && typeof item === "object")
@@ -389,7 +476,7 @@ const SearchResult = () => {
           );
         })
         .catch((error) => {
-          if (!current) return;
+          if (!current || suggestionsDismissedRef.current) return;
           setSuggestionsError(
             `Suggestions unavailable: ${errorMessage(error)}`,
           );
@@ -452,6 +539,14 @@ const SearchResult = () => {
         .filter((movie) => movie.title),
     [catalog],
   );
+  const normalizedTrendingCatalog = useMemo(
+    () =>
+      trendingCatalog
+        .filter((item) => item && typeof item === "object")
+        .map(normalizeMovie)
+        .filter((movie) => movie.title),
+    [trendingCatalog],
+  );
   const normalizedSearchItems = useMemo(
     () =>
       searchItems
@@ -478,18 +573,24 @@ const SearchResult = () => {
   }, [normalizedCatalog]);
 
   const filteredItems = useMemo(() => {
-    const source = term ? normalizedSearchItems : normalizedCatalog;
+    const source = term
+      ? normalizedSearchItems
+      : selectedSort === "trending"
+        ? normalizedTrendingCatalog
+        : normalizedCatalog;
     const result = source.filter((movie) => {
       if (
-        (selectedType === "anime" || term) &&
+        (selectedType === "anime" || term || selectedSort === "trending") &&
         !matchesType(movie, selectedType)
       ) {
         return false;
       }
       if (
-        appliedFilters.genre &&
-        !movie.genre.some(
-          (genre) => genre.toLowerCase() === appliedFilters.genre.toLowerCase(),
+        selectedGenres.length > 0 &&
+        !selectedGenres.some((selectedGenre) =>
+          movie.genre.some(
+            (genre) => genre.toLowerCase() === selectedGenre.toLowerCase(),
+          ),
         )
       ) {
         return false;
@@ -533,15 +634,24 @@ const SearchResult = () => {
     }
     return result;
   }, [
-    appliedFilters,
+    selectedGenres.join(","),
+    appliedFilters.year,
+    appliedFilters.language,
+    appliedFilters.rating,
+    appliedFilters.country,
     normalizedCatalog,
+    normalizedTrendingCatalog,
     normalizedSearchItems,
     selectedSort,
     selectedType,
     term,
   ]);
 
-  const hasMore = term ? searchPage < searchTotalPages : catalogPage < catalogTotalPages;
+  const hasMore = selectedSort === "trending"
+    ? false
+    : term
+      ? searchPage < searchTotalPages
+      : catalogPage < catalogTotalPages;
   const loadingMore = term ? searchLoadingMore : catalogLoadingMore;
 
   useEffect(() => {
@@ -590,16 +700,20 @@ const SearchResult = () => {
     const nextPage = catalogPage + 1;
     setCatalogLoadingMore(true);
     const mediaType = selectedType === "movie" ? "movie" : "tv";
-    const genreId =
-      genres.find(
-        (genre) =>
-          genre.name.toLowerCase() === appliedFilters.genre.toLowerCase(),
-      )?.id ?? appliedFilters.genre;
+    const genreIds = selectedGenres
+      .map(
+        (name) =>
+          genres.find(
+            (genre) => genre.name.toLowerCase() === name.toLowerCase(),
+          )?.id,
+      )
+      .filter((id) => id !== undefined)
+      .join("|");
     try {
       const response = await discover(
         mediaType,
         {
-          genre: genreId,
+          genre: genreIds,
           year: appliedFilters.year,
           language: appliedFilters.language,
           country: appliedFilters.country,
@@ -656,10 +770,15 @@ const SearchResult = () => {
   };
 
   const chooseSuggestion = (suggestion) => {
-    setInputValue(suggestion.title);
-    updateQuery({ term: suggestion.title });
+    const href = getMovieHref(suggestion);
+    suggestionsDismissedRef.current = true;
     setSuggestions([]);
-    searchFieldRef.current?.focus();
+    if (href) {
+      navigate(href);
+    } else {
+      updateQuery({ term: suggestion.title });
+      searchFieldRef.current?.focus();
+    }
   };
 
   const setDraftFilter = (name, value) => {
@@ -698,21 +817,32 @@ const SearchResult = () => {
     updateQuery({ [name]: value });
   };
 
-  const activeFilterCount = Object.values(appliedFilters).filter(Boolean).length;
+  const activeFilterCount =
+    selectedGenres.length +
+    [appliedFilters.year, appliedFilters.language, appliedFilters.rating, appliedFilters.country]
+      .filter(Boolean).length;
   const visibleItems = filteredItems;
   const titleBySort = {
-    relevance: "Discover",
-    year: "Release year",
-    rating: "Top rated",
-    title: "Browse A–Z",
+    relevance: "Most Popular",
+    trending: "Trending This Week",
+    year: "Newest First",
+    rating: "Top Rated",
   };
   const selectedTypeLabel =
     TYPE_OPTIONS.find((option) => option.value === selectedType)?.label ??
     "Movies";
 
-  const removeFilter = (name) => updateQuery({ [name]: "" });
+  const removeFilter = (name, value) => {
+    if (name === "genre") {
+      updateQuery({
+        genre: selectedGenres.filter((genre) => genre !== value).join(","),
+      });
+      return;
+    }
+    updateQuery({ [name]: "" });
+  };
   const activeFilters = [
-    appliedFilters.genre && ["genre", appliedFilters.genre],
+    ...selectedGenres.map((genre) => ["genre", genre]),
     appliedFilters.year && ["year", appliedFilters.year],
     appliedFilters.language && ["language", appliedFilters.language],
     appliedFilters.rating && ["rating", `TMDB ${appliedFilters.rating}+`],
@@ -723,6 +853,14 @@ const SearchResult = () => {
 
   return (
     <div className="discover-page">
+      {(filteredItems[0]?.backdrop || filteredItems[0]?.poster) && (
+        <img
+          className="discover-ambient"
+          src={toArtworkUrl(filteredItems[0].backdrop || filteredItems[0].poster)}
+          alt=""
+          aria-hidden="true"
+        />
+      )}
       <section className="discover-header" aria-labelledby="discover-title">
         <div className="discover-heading-row">
           <h1 id="discover-title">
@@ -740,7 +878,12 @@ const SearchResult = () => {
       </section>
 
       <div className="discover-search-sticky">
-        <form className="discover-search" role="search" onSubmit={submitSearch}>
+        <form
+          ref={searchFormRef}
+          className="discover-search"
+          role="search"
+          onSubmit={submitSearch}
+        >
           <label className="visually-hidden" htmlFor="discover-search-input">
             Search movies, shows, and anime
           </label>
@@ -749,6 +892,7 @@ const SearchResult = () => {
             ref={searchFieldRef}
             value={inputValue}
             onChange={(event) => {
+              suggestionsDismissedRef.current = false;
               setInputValue(event.target.value);
               setSuggestionIndex(-1);
               setSuggestions([]);
@@ -765,6 +909,7 @@ const SearchResult = () => {
                 event.preventDefault();
                 setSuggestionIndex((index) => Math.max(index - 1, 0));
               } else if (event.key === "Escape") {
+                suggestionsDismissedRef.current = true;
                 setSuggestions([]);
                 setSuggestionIndex(-1);
               } else if (
@@ -834,16 +979,38 @@ const SearchResult = () => {
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => chooseSuggestion(suggestion)}
                     >
-                      {suggestion.poster && (
-                        <img src={suggestion.poster} alt="" loading="lazy" />
+                      {suggestion.poster ? (
+                        <img
+                          className="discover-suggestion-poster"
+                          src={toArtworkUrl(suggestion.poster)}
+                          alt=""
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span
+                          className="discover-suggestion-poster is-empty"
+                          aria-hidden="true"
+                        />
                       )}
-                      <span>
+                      <span className="discover-suggestion-copy">
                         <strong>{suggestion.title}</strong>
-                        <small>
-                          {[suggestion.year, suggestion.type]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </small>
+                        <span className="discover-suggestion-meta">
+                          {suggestion.year && <span>{rawYear(suggestion)}</span>}
+                          {suggestion.rating !== null && (
+                            <span className="discover-suggestion-rating">
+                              <span aria-hidden="true">★</span>
+                              {Number(suggestion.rating).toFixed(1)}
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                      <span className="discover-suggestion-trailing">
+                        <span className="discover-suggestion-type">
+                          {suggestionTypeLabel(suggestion)}
+                        </span>
+                        <span className="discover-suggestion-arrow" aria-hidden="true">
+                          →
+                        </span>
                       </span>
                     </button>
                   ))}
@@ -853,7 +1020,7 @@ const SearchResult = () => {
         </form>
       </div>
 
-      <section className="discover-type-controls" aria-label="Media type">
+      <section className="discover-sticky-controls" aria-label="Browse titles">
         <div
           className="discover-control-row"
           role="group"
@@ -871,9 +1038,6 @@ const SearchResult = () => {
             </button>
           ))}
         </div>
-      </section>
-
-      <section className="discover-sticky-controls" aria-label="Sort and genre">
         <div
           className="discover-sort-row"
           role="group"
@@ -891,7 +1055,9 @@ const SearchResult = () => {
             </button>
           ))}
         </div>
+      </section>
 
+      <section className="discover-type-controls" aria-label="Filter by genre">
         <div
           className="discover-genre-row"
           role="group"
@@ -899,8 +1065,8 @@ const SearchResult = () => {
         >
           <button
             type="button"
-            className={`discover-genre-chip${!appliedFilters.genre ? " is-active" : ""}`}
-            aria-pressed={!appliedFilters.genre}
+            className={`discover-genre-chip${!selectedGenres.length ? " is-active" : ""}`}
+            aria-pressed={!selectedGenres.length}
             onClick={() => setSingleFilter("genre", "")}
           >
             All genres
@@ -909,14 +1075,14 @@ const SearchResult = () => {
             <button
               type="button"
               key={genre.id}
-              className={`discover-genre-chip${appliedFilters.genre === genre.name ? " is-active" : ""}`}
-              aria-pressed={appliedFilters.genre === genre.name}
-              onClick={() =>
-                setSingleFilter(
-                  "genre",
-                  appliedFilters.genre === genre.name ? "" : genre.name,
-                )
-              }
+              className={`discover-genre-chip${selectedGenres.includes(genre.name) ? " is-active" : ""}`}
+              aria-pressed={selectedGenres.includes(genre.name)}
+              onClick={() => {
+                const nextGenres = selectedGenres.includes(genre.name)
+                  ? selectedGenres.filter((name) => name !== genre.name)
+                  : [...selectedGenres, genre.name];
+                updateQuery({ genre: nextGenres.join(",") });
+              }}
             >
               {genre.name}
             </button>
@@ -958,9 +1124,9 @@ const SearchResult = () => {
           {activeFilters.map(([name, value]) => (
             <button
               type="button"
-              key={name}
+              key={`${name}-${value}`}
               className="discover-active-chip"
-              onClick={() => removeFilter(name)}
+              onClick={() => removeFilter(name, value)}
               aria-label={`Remove ${name} filter: ${value}`}
             >
               {value}
@@ -1035,24 +1201,21 @@ const SearchResult = () => {
           <>
             {filteredItems.length > 0 ? (
               <>
-                <MediaCard movie={filteredItems[0]} featured />
-                {filteredItems.length > 1 && (
-                  <div className="discover-grid">
-                    {visibleItems.slice(1).map((movie, index) => (
-                      <MediaCard
-                        key={movie.id ?? `${movie.title}-${index}`}
-                        movie={movie}
-                      />
-                    ))}
-                    {hasMore && (
-                      <div
-                        ref={loadMoreRef}
-                        className="discover-load-sentinel"
-                        aria-hidden="true"
-                      />
-                    )}
-                  </div>
-                )}
+                <div className="discover-grid">
+                  {visibleItems.map((movie, index) => (
+                    <MediaCard
+                      key={movie.id ?? `${movie.title}-${index}`}
+                      movie={movie}
+                    />
+                  ))}
+                  {hasMore && (
+                    <div
+                      ref={loadMoreRef}
+                      className="discover-load-sentinel"
+                      aria-hidden="true"
+                    />
+                  )}
+                </div>
                 {hasMore && (
                   <button
                     type="button"

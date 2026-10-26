@@ -5,6 +5,7 @@ export type MediaItem = {
   title: string;
   description: string;
   poster: string;
+  backdrop: string;
   year: string | number | null;
   rating: number | null;
   type: string | null;
@@ -104,6 +105,11 @@ export const normalizeMovie = (movie: RawMedia): MediaItem => {
       asString(movie.images) ??
       asString(movie.poster) ??
       asString(movie.poster_path) ??
+      "",
+    backdrop:
+      asString(movie.backdrop) ??
+      asString(movie.backdrop_path) ??
+      asString(movie.backdropImage) ??
       "",
     year,
     rating: asNumber(movie.rating ?? movie.vote_average),

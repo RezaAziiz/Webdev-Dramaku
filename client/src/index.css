@@ -216,6 +216,11 @@ select:focus-visible {
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--page-gutter);
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .mobile-topbar.is-scrolled {
@@ -224,6 +229,23 @@ select:focus-visible {
   box-shadow: inset 0 1px 0 var(--glass-highlight);
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
+}
+
+.icon-button.mobile-search-button {
+  display: inline-flex;
+  width: auto;
+  min-width: 84px;
+  gap: 7px;
+  padding-inline: 12px;
+  border-color: var(--white-14);
+  background: var(--white-06);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mobile-topbar.is-scrolled .mobile-search-button {
+  background: var(--search-surface);
 }
 
 .brand-mark {
@@ -300,6 +322,9 @@ select:focus-visible {
 
 .desktop-header {
   display: none;
+  background: color-mix(in srgb, var(--bg-base) 12%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
 }
 
 .mobile-tabbar {
@@ -361,7 +386,7 @@ select:focus-visible {
   height: 100svh;
   object-fit: cover;
   object-position: center 38%;
-  filter: blur(72px) saturate(1.55) brightness(0.24);
+  filter: blur(72px) saturate(1.55) brightness(0.4);
   opacity: 0.42;
   pointer-events: none;
   transform: scale(1.18);
@@ -402,7 +427,12 @@ select:focus-visible {
   object-fit: cover;
   object-position: center 34%;
   filter: saturate(1.05) contrast(1.05);
-  -webkit-mask-image: linear-gradient(180deg, black 0%, black 70%, transparent 100%);
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    black 0%,
+    black 70%,
+    transparent 100%
+  );
   mask-image: linear-gradient(180deg, black 0%, black 70%, transparent 100%);
   transform: scale(1.035);
   transition: transform 15s linear;
@@ -430,7 +460,12 @@ select:focus-visible {
       color-mix(in srgb, var(--bg-base) 45%, transparent) 65%,
       transparent 100%
     );
-  -webkit-mask-image: linear-gradient(180deg, black 0%, black 70%, transparent 100%);
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    black 0%,
+    black 70%,
+    transparent 100%
+  );
   mask-image: linear-gradient(180deg, black 0%, black 70%, transparent 100%);
 }
 
@@ -1989,7 +2024,8 @@ select:focus-visible {
   min-height: 44px;
   align-items: center;
   justify-content: center;
-  padding: 0 12px;
+  gap: 7px;
+  padding: 0 10px;
   border-radius: var(--radius-pill);
   color: var(--text-secondary);
   font-size: 13px;
@@ -2000,18 +2036,112 @@ select:focus-visible {
     color 180ms var(--ease-standard);
 }
 
+.desktop-nav-link svg {
+  flex: 0 0 auto;
+  font-size: 16px;
+}
+
 .desktop-nav-link.is-active {
   background: var(--accent);
   color: var(--bg-base);
 }
 
 .nav-search {
+  position: relative;
+  z-index: 30;
   display: flex;
   height: 44px;
   align-items: center;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-pill);
   background: var(--search-surface);
+}
+
+.nav-search-suggestions {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(420px, 82vw);
+  max-height: min(55vh, 420px);
+  padding: 8px;
+  overflow-y: auto;
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  background: var(--glass-fallback);
+  box-shadow: var(--shadow-popover);
+  -webkit-backdrop-filter: blur(28px) saturate(145%);
+  backdrop-filter: blur(28px) saturate(145%);
+}
+
+.nav-search-suggestions [role="listbox"] {
+  display: grid;
+  gap: 4px;
+}
+
+.nav-search-suggestion {
+  display: grid;
+  min-height: 76px;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.nav-search-suggestion:hover,
+.nav-search-suggestion:focus-visible,
+.nav-search-suggestion[aria-selected="true"] {
+  border-color: var(--white-18);
+  outline: none;
+  background: var(--white-10);
+}
+
+.nav-search-suggestion img,
+.nav-search-suggestion-poster {
+  width: 44px;
+  height: 62px;
+  border-radius: 8px;
+  object-fit: cover;
+  background:
+    linear-gradient(145deg, var(--accent-soft), transparent),
+    var(--surface-strong);
+}
+
+.nav-search-suggestion-copy {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.nav-search-suggestion-copy strong,
+.nav-search-suggestion-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-search-suggestion-copy strong {
+  font-size: 0.8rem;
+}
+
+.nav-search-suggestion-copy small {
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+}
+
+.nav-search-suggestion-type {
+  padding: 6px 9px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-size: 0.66rem;
+  font-weight: 800;
 }
 
 .nav-search input {
@@ -2026,7 +2156,8 @@ select:focus-visible {
 }
 
 .nav-search input::placeholder {
-  color: var(--text-muted);
+  color: var(--text-primary);
+  opacity: 0.9;
 }
 
 .profile-menu {
@@ -2043,10 +2174,11 @@ select:focus-visible {
   padding: 8px;
   border: 1px solid var(--glass-border);
   border-radius: 14px;
-  background: var(--surface-raised);
+  background: var(--glass-fallback);
+  background: color-mix(in srgb, var(--bg-base) 92%, transparent);
   box-shadow: var(--shadow-popover);
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(28px) saturate(145%);
+  backdrop-filter: blur(28px) saturate(145%);
 }
 
 .profile-popover a,
@@ -2117,15 +2249,47 @@ select:focus-visible {
 
   .desktop-header {
     position: fixed;
-    inset: 16px 24px auto;
+    inset: 0 0 auto;
     display: flex;
+    width: 100%;
+    max-width: none;
+    min-height: 76px;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(10px, 1.4vw, 22px);
+    margin-inline: auto;
+    padding: 8px max(var(--page-gutter), 24px);
+    border-width: 0 0 1px;
+    border-color: transparent;
+    border-radius: 0 0 var(--radius-panel) var(--radius-panel);
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    transition:
+      inset 240ms var(--ease-standard),
+      width 240ms var(--ease-standard),
+      max-width 240ms var(--ease-standard),
+      min-height 240ms var(--ease-standard),
+      padding 240ms var(--ease-standard),
+      border-radius 240ms var(--ease-standard),
+      background-color 240ms var(--ease-standard),
+      box-shadow 240ms var(--ease-standard);
+  }
+
+  .desktop-header:not(.is-scrolled) .brand-mark {
+    display: none;
+  }
+
+  .desktop-header.is-scrolled {
+    inset: 16px 24px auto;
     width: max-content;
     max-width: calc(100% - 48px);
     min-height: 64px;
-    align-items: center;
+    justify-content: flex-start;
     gap: clamp(12px, 1.6vw, 28px);
-    margin-inline: auto;
     padding: 8px 12px 8px 18px;
+    border-width: 1px;
     border-color: var(--glass-border);
     border-radius: var(--radius-pill);
     background: var(--glass-bg);
@@ -2134,6 +2298,20 @@ select:focus-visible {
       var(--shadow-nav);
     -webkit-backdrop-filter: blur(22px);
     backdrop-filter: blur(22px);
+  }
+
+  .desktop-header:not(.is-scrolled) .desktop-nav-link {
+    color: var(--text-primary);
+    text-shadow: 0 1px 10px color-mix(in srgb, var(--bg-base) 70%, transparent);
+  }
+
+  .desktop-header:not(.is-scrolled) .desktop-nav-link.is-active {
+    background: var(--glass-bg);
+    color: var(--text-primary);
+  }
+
+  .desktop-header:not(.is-scrolled) .desktop-header-actions {
+    margin-left: clamp(24px, 12vw, 220px);
   }
 
   .brand-mark {
@@ -2215,6 +2393,8 @@ select:focus-visible {
 }
 
 .discover-page {
+  position: relative;
+  isolation: isolate;
   display: grid;
   min-width: 0;
   gap: 22px;
@@ -2222,18 +2402,44 @@ select:focus-visible {
   margin: 0 auto;
 }
 
+.discover-ambient {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100svh;
+  object-fit: cover;
+  object-position: center 28%;
+  filter: blur(76px) saturate(1.5) brightness(0.34);
+  opacity: 0.42;
+  pointer-events: none;
+  transform: scale(1.18);
+}
+
+.discover-page
+  > :not(.discover-ambient):not(.discover-sticky-controls):not(
+    .discover-search-sticky
+  ) {
+  position: relative;
+  z-index: 1;
+}
+
 .discover-header {
+  position: relative;
+  z-index: 100;
   display: grid;
   gap: 16px;
   padding: 12px 0 14px;
 }
 
 .discover-search-sticky {
-  position: sticky;
-  z-index: 10;
-  top: var(--nav-height);
+  position: relative;
+  z-index: 100;
   padding: 8px 0;
-  background: var(--bg-base);
+}
+
+.discover-page > .discover-search-sticky {
+  z-index: 100;
 }
 
 .discover-heading-row {
@@ -2323,7 +2529,7 @@ select:focus-visible {
 
 .discover-suggestions {
   position: absolute;
-  z-index: 12;
+  z-index: 110;
   top: calc(100% + 8px);
   right: 0;
   left: 0;
@@ -2334,10 +2540,10 @@ select:focus-visible {
   overflow-y: auto;
   border: 1px solid var(--glass-border);
   border-radius: 18px;
-  background: var(--surface-raised);
+  background: var(--glass-fallback);
   box-shadow: var(--shadow-popover);
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(28px) saturate(145%);
+  backdrop-filter: blur(28px) saturate(145%);
 }
 
 .discover-suggestions [role="listbox"] {
@@ -2377,57 +2583,151 @@ select:focus-visible {
 
 .discover-suggestion {
   display: grid;
-  min-height: 60px;
-  grid-template-columns: 40px minmax(0, 1fr);
+  min-height: 104px;
+  grid-template-columns: 60px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  padding: 6px;
-  border: 0;
-  border-radius: 12px;
+  gap: 16px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 16px;
   background: transparent;
   color: var(--text-primary);
   text-align: left;
   cursor: pointer;
 }
 
+.discover-suggestion:hover,
+.discover-suggestion:focus-visible,
 .discover-suggestion[aria-selected="true"] {
-  background: var(--accent-soft);
+  border-color: var(--white-18);
+  outline: none;
+  background: var(--white-10);
 }
 
-.discover-suggestion img {
-  width: 40px;
-  height: 52px;
-  border-radius: 8px;
+.discover-suggestion:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.discover-suggestion-poster {
+  display: block;
+  width: 60px;
+  height: 84px;
+  border-radius: 10px;
   object-fit: cover;
   background: var(--surface-strong);
 }
 
-.discover-suggestion > span {
+.discover-suggestion-poster.is-empty {
+  background:
+    linear-gradient(145deg, var(--accent-soft), transparent),
+    var(--surface-strong);
+}
+
+.discover-suggestion-copy {
   display: grid;
   min-width: 0;
-  gap: 4px;
+  align-content: center;
+  gap: 6px;
 }
 
-.discover-suggestion strong,
-.discover-suggestion small {
+.discover-suggestion-copy strong {
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 0.94rem;
+  font-weight: 800;
+  line-height: 1.3;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
-.discover-suggestion strong {
-  font-size: 0.82rem;
+.discover-suggestion-meta {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 8px;
 }
 
-.discover-suggestion small,
+.discover-suggestion-meta > span,
 .discover-suggestion-status {
   margin: 0;
   color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.discover-suggestion-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.discover-suggestion-rating > span {
+  color: var(--accent);
+}
+
+.discover-suggestion-trailing {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.discover-suggestion-type {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  background: var(--white-06);
+  color: var(--text-secondary);
   font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.discover-suggestion-arrow {
+  color: var(--text-secondary);
+  font-size: 1.25rem;
 }
 
 .discover-suggestion-status {
   padding: 10px;
+}
+
+@media (max-width: 480px) {
+  .discover-suggestions {
+    max-height: min(55vh, 420px);
+    padding: 6px;
+    border-radius: 16px;
+  }
+
+  .discover-suggestion {
+    min-height: 96px;
+    grid-template-columns: 52px minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 8px;
+  }
+
+  .discover-suggestion-poster {
+    width: 52px;
+    height: 74px;
+  }
+
+  .discover-suggestion-trailing {
+    gap: 0;
+  }
+
+  .discover-suggestion-type {
+    min-width: 44px;
+    min-height: 30px;
+    padding: 0 8px;
+  }
+
+  .discover-suggestion-arrow {
+    display: none;
+  }
 }
 
 .discover-type-controls,
@@ -2438,14 +2738,13 @@ select:focus-visible {
 }
 
 .discover-sticky-controls {
-  position: sticky;
-  z-index: 7;
-  top: calc(var(--nav-height) + 70px);
+  position: relative;
+  z-index: 1;
+  z-index: 1;
   display: grid;
   min-width: 0;
-  gap: 10px;
-  padding: 10px 0;
-  background: var(--bg-base);
+  gap: 6px;
+  padding: 0;
 }
 
 .discover-control-row,
@@ -2620,6 +2919,7 @@ select:focus-visible {
 .discover-card {
   display: grid;
   min-width: 0;
+  grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-card);
@@ -2631,7 +2931,7 @@ select:focus-visible {
   position: relative;
   min-width: 0;
   overflow: hidden;
-  aspect-ratio: 0.72;
+  aspect-ratio: 16 / 9;
   background:
     linear-gradient(135deg, var(--accent-soft), transparent),
     var(--surface-strong);
@@ -2641,6 +2941,10 @@ select:focus-visible {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.discover-card-art.is-poster-fallback img {
+  object-fit: contain;
 }
 
 .discover-card-copy {
@@ -2683,52 +2987,24 @@ select:focus-visible {
   -webkit-line-clamp: 1;
 }
 
-.discover-card.is-featured {
-  grid-template-columns: 38% minmax(0, 1fr);
-  min-height: 170px;
-  border-radius: var(--radius-panel);
-  background: var(--overlay-panel);
-}
-
-.discover-card.is-featured .discover-card-art {
-  min-height: 170px;
-  aspect-ratio: auto;
-}
-
-.discover-card.is-featured .discover-card-copy {
-  align-content: center;
-  gap: 10px;
-  padding: 16px;
-}
-
-.discover-card.is-featured .discover-card-copy h3 {
-  font-size: clamp(1rem, 4vw, 1.6rem);
-}
-
-.discover-card.is-featured .discover-card-copy p {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  color: var(--text-secondary);
-  font-size: 0.74rem;
-  line-height: 1.45;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-}
-
 .discover-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
+}
+
+.discover-card:not(.is-featured) {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .discover-card-skeleton {
-  gap: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
 }
 
 .discover-card-skeleton > span {
   display: block;
-  aspect-ratio: 0.72;
+  aspect-ratio: 16 / 9;
   background: var(--white-06);
 }
 
@@ -2894,7 +3170,7 @@ select:focus-visible {
   }
 
   .discover-sticky-controls {
-    top: calc(var(--nav-height) + 70px);
+    position: relative;
   }
 
   .discover-grid {
@@ -2902,20 +3178,8 @@ select:focus-visible {
     gap: 14px;
   }
 
-  .discover-card.is-featured {
-    min-height: 240px;
-  }
-
-  .discover-card.is-featured .discover-card-art {
-    min-height: 240px;
-  }
-
   .discover-card-copy {
     padding: 14px;
-  }
-
-  .discover-card.is-featured .discover-card-copy {
-    padding: 24px;
   }
 
   .discover-filter-fields {
@@ -2949,11 +3213,11 @@ select:focus-visible {
   }
 
   .discover-search-sticky {
-    top: calc(var(--nav-height) + 8px);
+    position: relative;
   }
 
   .discover-sticky-controls {
-    top: calc(var(--nav-height) + 78px);
+    position: relative;
   }
 
   .discover-filter-desktop {
@@ -2976,19 +3240,6 @@ select:focus-visible {
   .discover-grid {
     grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 16px;
-  }
-
-  .discover-card.is-featured {
-    grid-template-columns: minmax(250px, 0.38fr) minmax(0, 1fr);
-    min-height: 300px;
-  }
-
-  .discover-card.is-featured .discover-card-art {
-    min-height: 300px;
-  }
-
-  .discover-card.is-featured .discover-card-copy {
-    padding: 32px;
   }
 }
 
