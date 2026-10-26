@@ -126,11 +126,17 @@
   text-transform: uppercase;
 }
 
+.detail-brand-mark img {
+  display: block;
+  height: 15px;
+  width: auto;
+}
+
 .detail-brand-mark {
   display: inline-flex;
   min-height: 34px;
   align-items: center;
-  padding-inline: 12px;
+  padding-inline: 14px;
   border: 1px solid var(--white-14);
   border-radius: var(--radius-pill);
   background: var(--glass-bg);
@@ -197,6 +203,7 @@
 
 .detail-button {
   display: inline-flex;
+  gap: 10px;
   min-height: 48px;
   align-items: center;
   justify-content: center;
@@ -222,6 +229,69 @@
 
 .detail-cast-glass {
   display: none;
+}
+
+.detail-mobile-starring {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-panel);
+}
+
+.detail-mobile-starring h2 {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.detail-mobile-starring-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.detail-mobile-starring-person {
+  display: grid;
+  min-width: 0;
+  justify-items: center;
+  align-content: start;
+  gap: 6px;
+  text-align: center;
+}
+
+.detail-mobile-starring-person img,
+.detail-mobile-starring-person > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  object-fit: cover;
+}
+
+.detail-mobile-starring-person strong,
+.detail-mobile-starring-person small {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-mobile-starring-person strong {
+  color: var(--text-primary);
+  font-size: 0.72rem;
+}
+
+.detail-mobile-starring-person small {
+  color: var(--text-muted);
+  font-size: 0.64rem;
 }
 
 .detail-content {
@@ -340,17 +410,6 @@
   font-size: clamp(1.7rem, 5vw, 2.45rem);
   line-height: 1.05;
   letter-spacing: -0.05em;
-}
-
-.detail-season-select select,
-.detail-comment-tools select,
-.detail-comment-form select {
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-pill);
-  background: var(--surface-raised);
-  color: var(--text-primary);
 }
 
 .detail-episode-list {
@@ -564,12 +623,17 @@
   font-size: 0.82rem;
 }
 
-.detail-comment-tools label,
-.detail-comment-form label {
+.detail-comment-tools .detail-comment-field,
+.detail-comment-form .detail-comment-field {
   display: grid;
   gap: 6px;
   color: var(--text-secondary);
   font-size: 0.76rem;
+}
+
+.detail-comment-form .detail-comment-field .ui-select {
+  min-width: 200px;
+  max-width: 260px;
 }
 
 .detail-comment-form {
@@ -669,7 +733,7 @@
 
   .detail-cast-glass {
     position: absolute;
-    z-index: 3;
+    z-index: 1;
     right: max(var(--page-gutter), calc((100vw - 1440px) / 2));
     bottom: 44px;
     display: grid;
@@ -682,6 +746,11 @@
     box-shadow: var(--shadow-nav);
     -webkit-backdrop-filter: blur(20px);
     backdrop-filter: blur(28px);
+    pointer-events: none;
+  }
+
+  .detail-mobile-starring {
+    display: none;
   }
 
   .detail-cast-glass h2 {

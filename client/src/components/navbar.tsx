@@ -6,6 +6,7 @@ import {
   LuFilm,
   LuHome,
   LuLibrary,
+  LuLogIn,
   LuLogOut,
   LuSearch,
   LuTv,
@@ -15,13 +16,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { USER_ROLES } from "../constants/auth";
 import { normalizeMovie, type MediaItem } from "../adapters/mediaAdapter";
 import { searchMovies } from "../services/movieService";
-
-type AuthState = {
-  isAuthenticated: boolean;
-  username: string;
-  role: string | null;
-  logout: () => void;
-};
+import logo from "../assets/Logo.png";
 
 const primaryLinks = [
   { label: "Home", to: "/", icon: LuHome },
@@ -91,7 +86,7 @@ const getSuggestionHref = (suggestion: MediaItem) => {
 };
 
 export default function Navbar() {
-  const { isAuthenticated, username, role, logout } = useAuth() as AuthState;
+  const { isAuthenticated, username, role, logout } = useAuth();
   const safeUsername = typeof username === "string" ? username : "";
   const navigate = useNavigate();
   const location = useLocation();
@@ -203,6 +198,7 @@ export default function Navbar() {
   ];
 
   const profileInitial = safeUsername ? safeUsername.charAt(0).toUpperCase() : "A";
+  const isBrowsePage = location.pathname === "/search";
 
   const signOut = () => {
     logout();
@@ -236,22 +232,21 @@ export default function Navbar() {
         className={`mobile-topbar${isScrolled ? " is-scrolled" : ""}`}
         aria-label="Site header"
       >
-        <Link className="brand-mark" to="/" aria-label="Dramaku home">
-          <span className="brand-icon" aria-hidden="true">
-            <LuClapperboard />
-          </span>
-          <span>Dramaku</span>
+        <Link className="brand-mark" to="/" aria-label="Lumo home">
+          <img className="brand-logo" src={logo} alt="Lumo" />
         </Link>
         <div className="mobile-header-actions">
-          <button
-            className="icon-button mobile-search-button"
-            type="button"
-            aria-label="Open search"
-            onClick={() => navigate("/search")}
-          >
-            <LuSearch aria-hidden="true" />
-            <span>Search</span>
-          </button>
+          {!isBrowsePage && (
+            <button
+              className="icon-button mobile-search-button"
+              type="button"
+              aria-label="Open search"
+              onClick={() => navigate("/search")}
+            >
+              <LuSearch aria-hidden="true" />
+              <span>Search</span>
+            </button>
+          )}
           {isAuthenticated ? (
             <div className="profile-menu">
               <button
@@ -288,6 +283,7 @@ export default function Navbar() {
             </div>
           ) : (
             <Link className="account-link" to="/login">
+              <LuLogIn aria-hidden="true" />
               Sign in
             </Link>
           )}
@@ -298,20 +294,18 @@ export default function Navbar() {
         className={`desktop-header${isScrolled ? " is-scrolled" : ""}`}
         aria-label="Site header"
       >
-        <Link className="brand-mark" to="/" aria-label="Dramaku home">
-          <span className="brand-icon" aria-hidden="true">
-            <LuClapperboard />
-          </span>
-          <span>Dramaku</span>
+        <Link className="brand-mark" to="/" aria-label="Lumo home">
+          <img className="brand-logo" src={logo} alt="Lumo" />
         </Link>
         {desktopNavigation}
         <div className="desktop-header-actions">
-          <form
-            ref={searchFormRef}
-            className="nav-search"
-            role="search"
-            onSubmit={submitSearch}
-            onKeyDown={(event) => {
+          {!isBrowsePage && (
+            <form
+              ref={searchFormRef}
+              className="nav-search"
+              role="search"
+              onSubmit={submitSearch}
+              onKeyDown={(event) => {
               if (event.key === "ArrowDown" && suggestions.length) {
                 event.preventDefault();
                 setActiveSuggestion((index) =>
@@ -325,8 +319,8 @@ export default function Navbar() {
                 setSuggestions([]);
                 setActiveSuggestion(-1);
               }
-            }}
-          >
+              }}
+            >
             <input
               aria-label="Search movies and shows"
               placeholder="Search"
@@ -395,7 +389,8 @@ export default function Navbar() {
                 </div>
               </div>
             )}
-          </form>
+            </form>
+          )}
           {isAuthenticated ? (
             <div className="profile-menu">
               <button
@@ -428,6 +423,7 @@ export default function Navbar() {
             </div>
           ) : (
             <Link className="sign-in-button" to="/login">
+              <LuLogIn aria-hidden="true" />
               Sign in
             </Link>
           )}

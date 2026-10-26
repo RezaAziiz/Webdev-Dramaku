@@ -1,7 +1,7 @@
 // src/components/Sidebar.jsx
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom"; // Use useNavigate instead of useHistory
-import logo from "../assets/logo.png";
+import logo from "../assets/Logo.png";
 import { useAuth } from "../contexts/AuthContext";
 import { USER_ROLES } from "../constants/auth";
 
@@ -29,7 +29,7 @@ const Sidebar = () => {
         className="text-xl font-bold flex items-center"
         onClick={handleLogoClick}
       >
-        <img src={logo} alt="Logo" className="w-40 h-10 mr-2 cursor-pointer" />
+        <img src={logo} alt="Logo" className="h-10 w-auto object-contain mr-2 cursor-pointer" />
       </div>
       <ul className="space-y-2 mt-5">
         {userRole !== USER_ROLES.WRITER && (

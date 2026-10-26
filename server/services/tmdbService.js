@@ -127,6 +127,68 @@ const resolveGenreNames = async (genreIds = []) => {
   return genreIds.map((id) => movieMap.get(id) || tvMap.get(id)).filter(Boolean);
 };
 
+const LANGUAGE_LABELS = {
+  ar: 'Arabic',
+  cn: 'Cantonese',
+  de: 'German',
+  en: 'English',
+  es: 'Spanish',
+  fr: 'French',
+  hi: 'Hindi',
+  id: 'Indonesian',
+  it: 'Italian',
+  ja: 'Japanese',
+  jv: 'Javanese',
+  km: 'Khmer',
+  ko: 'Korean',
+  ms: 'Malay',
+  ph: 'Filipino',
+  pt: 'Portuguese',
+  ru: 'Russian',
+  su: 'Sundanese',
+  th: 'Thai',
+  tr: 'Turkish',
+  zh: 'Mandarin',
+};
+
+const COUNTRY_LABELS = {
+  AU: 'Australia',
+  CA: 'Canada',
+  CN: 'China',
+  DE: 'Germany',
+  FR: 'France',
+  GB: 'United Kingdom',
+  HK: 'Hong Kong',
+  ID: 'Indonesia',
+  IN: 'India',
+  IT: 'Italy',
+  JP: 'Japan',
+  KR: 'South Korea',
+  MY: 'Malaysia',
+  PH: 'Philippines',
+  RU: 'Russia',
+  SG: 'Singapore',
+  TH: 'Thailand',
+  TW: 'Taiwan',
+  US: 'United States of America',
+};
+
+const resolveLanguageName = (code) =>
+  LANGUAGE_LABELS[code] || code;
+
+const resolveCountryName = (value) =>
+  COUNTRY_LABELS[value] || value;
+
+const resolveCountries = (item) => {
+  const raw = item.production_countries || item.origin_country || [];
+  return (Array.isArray(raw) ? raw : [raw])
+    .map((country) => {
+      if (typeof country === 'string') return resolveCountryName(country);
+      return resolveCountryName(country.name);
+    })
+    .filter(Boolean);
+};
+
 // Normalizes a raw TMDB list item (movie or tv) into the flat contract shape
 // docs/BACKEND_TODO.md expects: id, title, images, description, year,
 // rating, type, genre. Mirrors client/src/adapters/mediaAdapter.ts field
@@ -148,6 +210,10 @@ const normalizeTitle = async (item, fallbackMediaType) => {
     rating: item.vote_average ?? null,
     type: mediaType,
     genre,
+    language: item.original_language
+      ? resolveLanguageName(item.original_language)
+      : null,
+    countries: resolveCountries(item),
   };
 };
 exports.normalizeTitle = normalizeTitle;

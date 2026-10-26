@@ -1,204 +1,21 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { normalizeGenre, normalizeMovie } from "../adapters/mediaAdapter";
 import { getGenres } from "../services/catalogService";
 import { discover, getTrending, searchMovies } from "../services/movieService";
-
-const SORT_OPTIONS = [
-  { value: "relevance", label: "Most Popular" },
-  { value: "trending", label: "Trending This Week" },
-  { value: "year", label: "Newest First" },
-  { value: "rating", label: "Top Rated" },
-];
-const TYPE_OPTIONS = [
-  { value: "movie", label: "Movies" },
-  { value: "tv", label: "TV Shows" },
-  { value: "anime", label: "Anime" },
-];
-
-const responseItems = (response) => {
-  if (Array.isArray(response)) return response;
-  if (!response || typeof response !== "object") return [];
-  for (const key of ["items", "movies", "genres", "suggestions", "results", "data"]) {
-    if (Array.isArray(response[key])) return response[key];
-  }
-  return [];
-};
-
-const errorMessage = (error) =>
-  error instanceof Error ? error.message : "The request could not be completed.";
-
-const normalizedType = (movie) => movie.type?.trim().toLowerCase() ?? "";
-
-const matchesType = (movie, type) => {
-  const itemType = normalizedType(movie);
-  if (type === "anime") {
-    return (
-      itemType === "anime" ||
-      movie.genre.some((genre) => genre.toLowerCase() === "anime")
-    );
-  }
-  if (type === "tv") {
-    return ["tv", "series", "tv show", "show"].includes(itemType);
-  }
-  return !itemType || ["movie", "film"].includes(itemType);
-};
-
-const suggestionTypeLabel = (movie) => {
-  if (movie.genre.some((genre) => genre.toLowerCase() === "anime")) {
-    return "Anime";
-  }
-  return normalizedType(movie) === "tv" ? "TV" : "Movie";
-};
-
-const rawYear = (movie) => {
-  const year = movie.year == null ? "" : String(movie.year);
-  return /^\d{4}/.test(year) ? year.slice(0, 4) : "";
-};
-
-const toArtworkUrl = (image) => {
-  if (typeof image !== "string" || !image.trim()) return "";
-  if (image.startsWith("/")) {
-    return `https://image.tmdb.org/t/p/original${image}`;
-  }
-  return image.replace(
-    /(image\.tmdb\.org\/t\/p\/)(?:w\d+|h\d+|original)(\/)/,
-    "$1original$2",
-  );
-};
-
-const getMovieHref = (movie) => {
-  if (movie.id === null) return null;
-  const mediaType = String(movie.type || "").trim().toLowerCase();
-  const type = ["tv", "series", "tv show", "show", "anime"].includes(mediaType) ||
-    movie.genre.some((genre) => genre.toLowerCase() === "anime")
-    ? "tv"
-    : "movie";
-  return `/movies/${type}/${encodeURIComponent(movie.id)}`;
-};
-
-const FilterFields = ({ values, options, onChange }) => (
-  <div className="discover-filter-fields">
-    <label>
-      <span>Year</span>
-      <select
-        value={values.year}
-        disabled={!options.years.length}
-        onChange={(event) => onChange("year", event.target.value)}
-      >
-        <option value="">Any year</option>
-        {options.years.map((year) => (
-          <option key={year} value={year}>
-            {year}
-          </option>
-        ))}
-        {!options.years.length && <option value="">Not provided by catalog</option>}
-      </select>
-    </label>
-    <label>
-      <span>Language</span>
-      <select
-        value={values.language}
-        disabled={!options.languages.length}
-        onChange={(event) => onChange("language", event.target.value)}
-      >
-        <option value="">Any language</option>
-        {options.languages.map((language) => (
-          <option key={language} value={language}>
-            {language}
-          </option>
-        ))}
-        {!options.languages.length && (
-          <option value="">Not provided by catalog</option>
-        )}
-      </select>
-    </label>
-    <label>
-      <span>Minimum rating</span>
-      <select
-        value={values.rating}
-        onChange={(event) => onChange("rating", event.target.value)}
-      >
-        <option value="">Any rating</option>
-        {[5, 7, 8, 9].map((rating) => (
-          <option key={rating} value={rating}>
-            TMDB {rating}+
-          </option>
-        ))}
-      </select>
-    </label>
-    <label>
-      <span>Country</span>
-      <select
-        value={values.country}
-        disabled={!options.countries.length}
-        onChange={(event) => onChange("country", event.target.value)}
-      >
-        <option value="">Any country</option>
-        {options.countries.map((country) => (
-          <option key={country} value={country}>
-            {country}
-          </option>
-        ))}
-        {!options.countries.length && (
-          <option value="">Not provided by catalog</option>
-        )}
-      </select>
-    </label>
-  </div>
-);
-
-const MediaCard = ({ movie }) => {
-  const href = getMovieHref(movie);
-  const artwork = movie.backdrop || movie.poster;
-  const content = (
-    <>
-      <div
-        className={`discover-card-art${movie.backdrop ? "" : " is-poster-fallback"}`}
-      >
-        {artwork ? (
-          <img
-            src={toArtworkUrl(artwork)}
-            alt={`${movie.title} artwork`}
-            loading="lazy"
-          />
-        ) : (
-          <span aria-hidden="true" />
-        )}
-      </div>
-      <div className="discover-card-copy">
-        <div className="discover-card-meta">
-          {movie.type && <span>{movie.type}</span>}
-          {movie.year && <span>{movie.year}</span>}
-          {movie.rating !== null && (
-            <span>TMDB {Number(movie.rating).toFixed(1)}</span>
-          )}
-        </div>
-        <h3>{movie.title}</h3>
-        {movie.genre.length > 0 && (
-          <span className="discover-card-genres">{movie.genre.join(" · ")}</span>
-        )}
-      </div>
-    </>
-  );
-
-  if (!href) {
-    return (
-      <article className="discover-card">
-        {content}
-      </article>
-    );
-  }
-  return (
-    <Link
-      className="discover-card"
-      to={href}
-      aria-label={`View ${movie.title} details`}
-    >
-      {content}
-    </Link>
-  );
-};
+import { buildMediaDetailPath, tmdbImageUrl, unwrapList } from "../lib/media";
+import {
+  buildActiveFilters,
+  buildGenreIds,
+  errorMessage,
+  filterAndSortMedia,
+  getFilterOptions,
+} from "../lib/discover";
+import { SORT_OPTIONS, TITLE_BY_SORT, TYPE_OPTIONS } from "../constants/discover";
+import DiscoverSearchBar from "../components/discover/DiscoverSearchBar";
+import DiscoverControls from "../components/discover/DiscoverControls";
+import DiscoverResults from "../components/discover/DiscoverResults";
+import FilterSheet from "../components/discover/FilterSheet";
 
 const SearchResult = () => {
   const location = useLocation();
@@ -224,14 +41,20 @@ const SearchResult = () => {
   )
     ? query.get("sort")
     : "relevance";
-  const selectedGenres = (query.get("genre") ?? "").split(",").filter(Boolean);
-  const appliedFilters = {
-    genre: selectedGenres,
-    year: query.get("year") ?? "",
-    language: query.get("language") ?? "",
-    rating: query.get("rating") ?? "",
-    country: query.get("country") ?? "",
-  };
+  const selectedGenres = useMemo(
+    () => (query.get("genre") ?? "").split(",").filter(Boolean),
+    [query],
+  );
+  const appliedFilters = useMemo(
+    () => ({
+      genre: selectedGenres,
+      year: query.get("year") ?? "",
+      language: query.get("language") ?? "",
+      rating: query.get("rating") ?? "",
+      country: query.get("country") ?? "",
+    }),
+    [query, selectedGenres],
+  );
 
   const [catalog, setCatalog] = useState([]);
   const [trendingCatalog, setTrendingCatalog] = useState([]);
@@ -296,7 +119,7 @@ const SearchResult = () => {
       .then((response) => {
         if (!current) return;
         setGenres(
-          responseItems(response)
+          unwrapList(response)
             .filter((genre) => genre && typeof genre === "object")
             .map(normalizeGenre)
             .filter((genre) => genre !== null),
@@ -329,30 +152,19 @@ const SearchResult = () => {
     setCatalogTotalPages(1);
 
     const mediaType = selectedType === "movie" ? "movie" : "tv";
-    const genreIds = selectedGenres
-      .map(
-        (name) =>
-          genres.find(
-            (genre) => genre.name.toLowerCase() === name.toLowerCase(),
-          )?.id,
-      )
-      .filter((id) => id !== undefined)
-      .join("|");
+    const genreIds = buildGenreIds(selectedGenres, genres);
 
-    discover(
-      mediaType,
-      {
-        genre: genreIds,
-        year: appliedFilters.year,
-        language: appliedFilters.language,
-        country: appliedFilters.country,
-        minRating: appliedFilters.rating,
-        page: 1,
-      },
-    )
+    discover(mediaType, {
+      genre: genreIds,
+      year: appliedFilters.year,
+      language: appliedFilters.language,
+      country: appliedFilters.country,
+      minRating: appliedFilters.rating,
+      page: 1,
+    })
       .then((response) => {
         if (!current) return;
-        setCatalog(responseItems(response));
+        setCatalog(unwrapList(response));
         setCatalogTotalPages(Number(response?.total_pages) || 1);
       })
       .catch((error) => {
@@ -371,11 +183,8 @@ const SearchResult = () => {
     term,
     selectedType,
     selectedSort,
-    selectedGenres.join(","),
-    appliedFilters.year,
-    appliedFilters.language,
-    appliedFilters.country,
-    appliedFilters.rating,
+    selectedGenres,
+    appliedFilters,
     catalogAttempt,
     genres,
   ]);
@@ -396,7 +205,7 @@ const SearchResult = () => {
 
     getTrending()
       .then((response) => {
-        if (current) setTrendingCatalog(responseItems(response));
+        if (current) setTrendingCatalog(unwrapList(response));
       })
       .catch((error) => {
         if (!current) return;
@@ -433,7 +242,7 @@ const SearchResult = () => {
     searchMovies(term, { page: 1 })
       .then((response) => {
         if (!current) return;
-        setSearchItems(responseItems(response));
+        setSearchItems(unwrapList(response));
         setSearchTotalPages(Number(response?.total_pages) || 1);
       })
       .catch((error) => {
@@ -468,7 +277,7 @@ const SearchResult = () => {
         .then((response) => {
           if (!current || suggestionsDismissedRef.current) return;
           setSuggestions(
-            responseItems(response)
+            unwrapList(response)
               .filter((item) => item && typeof item === "object")
               .map(normalizeMovie)
               .filter((item) => item.title)
@@ -518,10 +327,7 @@ const SearchResult = () => {
         if (event.shiftKey && document.activeElement === first) {
           event.preventDefault();
           last.focus();
-        } else if (
-          !event.shiftKey &&
-          document.activeElement === last
-        ) {
+        } else if (!event.shiftKey && document.activeElement === last) {
           event.preventDefault();
           first.focus();
         }
@@ -555,22 +361,10 @@ const SearchResult = () => {
         .filter((movie) => movie.title),
     [searchItems],
   );
-  const filterOptions = useMemo(() => {
-    const years = new Set();
-    const languages = new Set();
-    const countries = new Set();
-    normalizedCatalog.forEach((movie) => {
-      const year = rawYear(movie);
-      if (year) years.add(year);
-      if (movie.language) languages.add(movie.language);
-      movie.countries.forEach((country) => countries.add(country));
-    });
-    return {
-      years: [...years].sort((a, b) => Number(b) - Number(a)),
-      languages: [...languages].sort((a, b) => a.localeCompare(b)),
-      countries: [...countries].sort((a, b) => a.localeCompare(b)),
-    };
-  }, [normalizedCatalog]);
+  const filterOptions = useMemo(
+    () => getFilterOptions(normalizedCatalog),
+    [normalizedCatalog],
+  );
 
   const filteredItems = useMemo(() => {
     const source = term
@@ -578,67 +372,18 @@ const SearchResult = () => {
       : selectedSort === "trending"
         ? normalizedTrendingCatalog
         : normalizedCatalog;
-    const result = source.filter((movie) => {
-      if (
-        (selectedType === "anime" || term || selectedSort === "trending") &&
-        !matchesType(movie, selectedType)
-      ) {
-        return false;
-      }
-      if (
-        selectedGenres.length > 0 &&
-        !selectedGenres.some((selectedGenre) =>
-          movie.genre.some(
-            (genre) => genre.toLowerCase() === selectedGenre.toLowerCase(),
-          ),
-        )
-      ) {
-        return false;
-      }
-      if (appliedFilters.year && rawYear(movie) !== appliedFilters.year) {
-        return false;
-      }
-      if (
-        appliedFilters.language &&
-        movie.language?.toLowerCase() !== appliedFilters.language.toLowerCase()
-      ) {
-        return false;
-      }
-      if (
-        appliedFilters.country &&
-        !movie.countries.some(
-          (country) =>
-            country.toLowerCase() === appliedFilters.country.toLowerCase(),
-        )
-      ) {
-        return false;
-      }
-      if (
-        appliedFilters.rating &&
-        (movie.rating === null ||
-          Number(movie.rating) < Number(appliedFilters.rating))
-      ) {
-        return false;
-      }
-      return true;
-    });
 
-    if (selectedSort === "year") {
-      result.sort((a, b) => Number(rawYear(b) || 0) - Number(rawYear(a) || 0));
-    } else if (selectedSort === "rating") {
-      result.sort(
-        (a, b) => Number(b.rating ?? -1) - Number(a.rating ?? -1),
-      );
-    } else if (selectedSort === "title") {
-      result.sort((a, b) => a.title.localeCompare(b.title));
-    }
-    return result;
+    return filterAndSortMedia({
+      source,
+      selectedType,
+      selectedGenres,
+      appliedFilters,
+      selectedSort,
+      term,
+    });
   }, [
-    selectedGenres.join(","),
-    appliedFilters.year,
-    appliedFilters.language,
-    appliedFilters.rating,
-    appliedFilters.country,
+    selectedGenres,
+    appliedFilters,
     normalizedCatalog,
     normalizedTrendingCatalog,
     normalizedSearchItems,
@@ -647,11 +392,12 @@ const SearchResult = () => {
     term,
   ]);
 
-  const hasMore = selectedSort === "trending"
-    ? false
-    : term
-      ? searchPage < searchTotalPages
-      : catalogPage < catalogTotalPages;
+  const hasMore =
+    selectedSort === "trending"
+      ? false
+      : term
+        ? searchPage < searchTotalPages
+        : catalogPage < catalogTotalPages;
   const loadingMore = term ? searchLoadingMore : catalogLoadingMore;
 
   useEffect(() => {
@@ -679,17 +425,16 @@ const SearchResult = () => {
       const nextPage = searchPage + 1;
       setSearchLoadingMore(true);
       try {
-        const response = await searchMovies(
-          term,
-          { page: nextPage },
-        );
+        const response = await searchMovies(term, { page: nextPage });
         if (pageRequestRef.current !== requestId) return;
-        setSearchItems((current) => [...current, ...responseItems(response)]);
+        setSearchItems((current) => [...current, ...unwrapList(response)]);
         setSearchPage(nextPage);
         setSearchTotalPages(Number(response?.total_pages) || nextPage);
       } catch (error) {
         if (pageRequestRef.current === requestId) {
-          setPaginationError(`Could not load more search results: ${errorMessage(error)}`);
+          setPaginationError(
+            `Could not load more search results: ${errorMessage(error)}`,
+          );
         }
       } finally {
         if (pageRequestRef.current === requestId) setSearchLoadingMore(false);
@@ -700,29 +445,18 @@ const SearchResult = () => {
     const nextPage = catalogPage + 1;
     setCatalogLoadingMore(true);
     const mediaType = selectedType === "movie" ? "movie" : "tv";
-    const genreIds = selectedGenres
-      .map(
-        (name) =>
-          genres.find(
-            (genre) => genre.name.toLowerCase() === name.toLowerCase(),
-          )?.id,
-      )
-      .filter((id) => id !== undefined)
-      .join("|");
+    const genreIds = buildGenreIds(selectedGenres, genres);
     try {
-      const response = await discover(
-        mediaType,
-        {
-          genre: genreIds,
-          year: appliedFilters.year,
-          language: appliedFilters.language,
-          country: appliedFilters.country,
-          minRating: appliedFilters.rating,
-          page: nextPage,
-        },
-      );
+      const response = await discover(mediaType, {
+        genre: genreIds,
+        year: appliedFilters.year,
+        language: appliedFilters.language,
+        country: appliedFilters.country,
+        minRating: appliedFilters.rating,
+        page: nextPage,
+      });
       if (pageRequestRef.current !== requestId) return;
-      setCatalog((current) => [...current, ...responseItems(response)]);
+      setCatalog((current) => [...current, ...unwrapList(response)]);
       setCatalogPage(nextPage);
       setCatalogTotalPages(Number(response?.total_pages) || nextPage);
     } catch (error) {
@@ -770,7 +504,7 @@ const SearchResult = () => {
   };
 
   const chooseSuggestion = (suggestion) => {
-    const href = getMovieHref(suggestion);
+    const href = buildMediaDetailPath(suggestion);
     suggestionsDismissedRef.current = true;
     setSuggestions([]);
     if (href) {
@@ -778,6 +512,38 @@ const SearchResult = () => {
     } else {
       updateQuery({ term: suggestion.title });
       searchFieldRef.current?.focus();
+    }
+  };
+
+  const handleInputChange = (value) => {
+    suggestionsDismissedRef.current = false;
+    setInputValue(value);
+    setSuggestionIndex(-1);
+    setSuggestions([]);
+    setSuggestionsError("");
+    setSuggestionsLoading(false);
+  };
+
+  const handleInputKeyDown = (event) => {
+    if (event.key === "ArrowDown" && suggestions.length) {
+      event.preventDefault();
+      setSuggestionIndex((index) =>
+        Math.min(index + 1, suggestions.length - 1),
+      );
+    } else if (event.key === "ArrowUp" && suggestions.length) {
+      event.preventDefault();
+      setSuggestionIndex((index) => Math.max(index - 1, 0));
+    } else if (event.key === "Escape") {
+      suggestionsDismissedRef.current = true;
+      setSuggestions([]);
+      setSuggestionIndex(-1);
+    } else if (
+      event.key === "Enter" &&
+      suggestionIndex >= 0 &&
+      suggestions[suggestionIndex]
+    ) {
+      event.preventDefault();
+      chooseSuggestion(suggestions[suggestionIndex]);
     }
   };
 
@@ -817,17 +583,26 @@ const SearchResult = () => {
     updateQuery({ [name]: value });
   };
 
+  const toggleGenre = (name) => {
+    const nextGenres = selectedGenres.includes(name)
+      ? selectedGenres.filter((genreName) => genreName !== name)
+      : [...selectedGenres, name];
+    updateQuery({ genre: nextGenres.join(",") });
+  };
+
+  const openFilterSheet = () => {
+    setDraftFilters(appliedFilters);
+    setFilterSheetOpen(true);
+  };
+
   const activeFilterCount =
     selectedGenres.length +
-    [appliedFilters.year, appliedFilters.language, appliedFilters.rating, appliedFilters.country]
-      .filter(Boolean).length;
-  const visibleItems = filteredItems;
-  const titleBySort = {
-    relevance: "Most Popular",
-    trending: "Trending This Week",
-    year: "Newest First",
-    rating: "Top Rated",
-  };
+    [
+      appliedFilters.year,
+      appliedFilters.language,
+      appliedFilters.rating,
+      appliedFilters.country,
+    ].filter(Boolean).length;
   const selectedTypeLabel =
     TYPE_OPTIONS.find((option) => option.value === selectedType)?.label ??
     "Movies";
@@ -841,22 +616,40 @@ const SearchResult = () => {
     }
     updateQuery({ [name]: "" });
   };
-  const activeFilters = [
-    ...selectedGenres.map((genre) => ["genre", genre]),
-    appliedFilters.year && ["year", appliedFilters.year],
-    appliedFilters.language && ["language", appliedFilters.language],
-    appliedFilters.rating && ["rating", `TMDB ${appliedFilters.rating}+`],
-    appliedFilters.country && ["country", appliedFilters.country],
-  ].filter(Boolean);
+  const activeFilters = buildActiveFilters(selectedGenres, appliedFilters);
 
   const canRenderResults = term ? !searchUnavailable : !catalogUnavailable;
+
+  const retryResults = () => {
+    if (catalogError) setCatalogAttempt((attempt) => attempt + 1);
+    if (searchError) setSearchAttempt((attempt) => attempt + 1);
+    if (genresError) setGenreAttempt((attempt) => attempt + 1);
+  };
+
+  const handleEmptyAction = () => {
+    if (term) {
+      updateQuery({ term: "" });
+      setInputValue("");
+    } else if (
+      activeFilterCount > 0 ||
+      selectedType !== "movie" ||
+      selectedSort !== "relevance"
+    ) {
+      resetFilters();
+    } else {
+      setCatalogAttempt((attempt) => attempt + 1);
+    }
+  };
 
   return (
     <div className="discover-page">
       {(filteredItems[0]?.backdrop || filteredItems[0]?.poster) && (
         <img
           className="discover-ambient"
-          src={toArtworkUrl(filteredItems[0].backdrop || filteredItems[0].poster)}
+          src={tmdbImageUrl(
+            filteredItems[0].backdrop || filteredItems[0].poster,
+            "original",
+          )}
           alt=""
           aria-hidden="true"
         />
@@ -864,453 +657,92 @@ const SearchResult = () => {
       <section className="discover-header" aria-labelledby="discover-title">
         <div className="discover-heading-row">
           <h1 id="discover-title">
-            <span>{titleBySort[selectedSort]}</span>
+            <span>{TITLE_BY_SORT[selectedSort]}</span>
             <span>{selectedTypeLabel}</span>
           </h1>
-          <button
-            type="button"
-            className="discover-reset"
-            onClick={resetFilters}
-          >
-            Reset
-          </button>
         </div>
       </section>
 
-      <div className="discover-search-sticky">
-        <form
-          ref={searchFormRef}
-          className="discover-search"
-          role="search"
+      <div className="discover-search-tools">
+        <DiscoverSearchBar
+          term={term}
+          inputValue={inputValue}
+          suggestions={suggestions}
+          suggestionsLoading={suggestionsLoading}
+          suggestionsError={suggestionsError}
+          suggestionIndex={suggestionIndex}
+          searchFormRef={searchFormRef}
+          searchFieldRef={searchFieldRef}
+          onInputChange={handleInputChange}
+          onInputKeyDown={handleInputKeyDown}
           onSubmit={submitSearch}
+          onChooseSuggestion={chooseSuggestion}
+          onRetrySuggestions={() =>
+            setSuggestionAttempt((attempt) => attempt + 1)
+          }
+        />
+        <button
+          type="button"
+          className="discover-reset"
+          onClick={resetFilters}
         >
-          <label className="visually-hidden" htmlFor="discover-search-input">
-            Search movies, shows, and anime
-          </label>
-          <input
-            id="discover-search-input"
-            ref={searchFieldRef}
-            value={inputValue}
-            onChange={(event) => {
-              suggestionsDismissedRef.current = false;
-              setInputValue(event.target.value);
-              setSuggestionIndex(-1);
-              setSuggestions([]);
-              setSuggestionsError("");
-              setSuggestionsLoading(false);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "ArrowDown" && suggestions.length) {
-                event.preventDefault();
-                setSuggestionIndex((index) =>
-                  Math.min(index + 1, suggestions.length - 1),
-                );
-              } else if (event.key === "ArrowUp" && suggestions.length) {
-                event.preventDefault();
-                setSuggestionIndex((index) => Math.max(index - 1, 0));
-              } else if (event.key === "Escape") {
-                suggestionsDismissedRef.current = true;
-                setSuggestions([]);
-                setSuggestionIndex(-1);
-              } else if (
-                event.key === "Enter" &&
-                suggestionIndex >= 0 &&
-                suggestions[suggestionIndex]
-              ) {
-                event.preventDefault();
-                chooseSuggestion(suggestions[suggestionIndex]);
-              }
-            }}
-            placeholder="Search titles"
-            autoComplete="off"
-            role="combobox"
-            aria-haspopup="listbox"
-            aria-autocomplete="list"
-            aria-expanded={
-              inputValue.trim().length >= 2 &&
-              inputValue.trim() !== term &&
-              (suggestionsLoading ||
-                Boolean(suggestionsError) ||
-                suggestions.length > 0)
-            }
-            aria-controls="discover-suggestions"
-            aria-activedescendant={
-              suggestionIndex >= 0
-                ? `discover-suggestion-${suggestionIndex}`
-                : undefined
-            }
-          />
-          <button type="submit">Search</button>
-          {inputValue.trim().length >= 2 &&
-            inputValue.trim() !== term &&
-            (suggestionsLoading || suggestionsError || suggestions.length > 0) && (
-              <div className="discover-suggestions">
-                {suggestionsLoading && (
-                  <p className="discover-suggestion-status" role="status">
-                    Searching suggestions…
-                  </p>
-                )}
-                {suggestionsError && (
-                  <div className="discover-suggestion-error">
-                    <p role="alert">{suggestionsError}</p>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSuggestionAttempt((attempt) => attempt + 1)
-                      }
-                    >
-                      Retry
-                    </button>
-                  </div>
-                )}
-                <div
-                  id="discover-suggestions"
-                  role="listbox"
-                  aria-label="Search suggestions"
-                >
-                  {suggestions.map((suggestion, index) => (
-                    <button
-                      key={suggestion.id ?? `${suggestion.title}-${index}`}
-                      id={`discover-suggestion-${index}`}
-                      type="button"
-                      role="option"
-                      aria-selected={suggestionIndex === index}
-                      className="discover-suggestion"
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => chooseSuggestion(suggestion)}
-                    >
-                      {suggestion.poster ? (
-                        <img
-                          className="discover-suggestion-poster"
-                          src={toArtworkUrl(suggestion.poster)}
-                          alt=""
-                          loading="lazy"
-                        />
-                      ) : (
-                        <span
-                          className="discover-suggestion-poster is-empty"
-                          aria-hidden="true"
-                        />
-                      )}
-                      <span className="discover-suggestion-copy">
-                        <strong>{suggestion.title}</strong>
-                        <span className="discover-suggestion-meta">
-                          {suggestion.year && <span>{rawYear(suggestion)}</span>}
-                          {suggestion.rating !== null && (
-                            <span className="discover-suggestion-rating">
-                              <span aria-hidden="true">★</span>
-                              {Number(suggestion.rating).toFixed(1)}
-                            </span>
-                          )}
-                        </span>
-                      </span>
-                      <span className="discover-suggestion-trailing">
-                        <span className="discover-suggestion-type">
-                          {suggestionTypeLabel(suggestion)}
-                        </span>
-                        <span className="discover-suggestion-arrow" aria-hidden="true">
-                          →
-                        </span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-        </form>
+          Reset
+        </button>
       </div>
 
-      <section className="discover-sticky-controls" aria-label="Browse titles">
-        <div
-          className="discover-control-row"
-          role="group"
-          aria-label="Choose media type"
-        >
-          {TYPE_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={`discover-type-chip${selectedType === option.value ? " is-active" : ""}`}
-              aria-pressed={selectedType === option.value}
-              onClick={() => updateQuery({ type: option.value })}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-        <div
-          className="discover-sort-row"
-          role="group"
-          aria-label="Sort results"
-        >
-          {SORT_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={`discover-sort-chip${selectedSort === option.value ? " is-active" : ""}`}
-              aria-pressed={selectedSort === option.value}
-              onClick={() => setSingleFilter("sort", option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </section>
+      <DiscoverControls
+        selectedType={selectedType}
+        selectedSort={selectedSort}
+        selectedGenres={selectedGenres}
+        genres={genres}
+        appliedFilters={appliedFilters}
+        filterOptions={filterOptions}
+        activeFilterCount={activeFilterCount}
+        activeFilters={activeFilters}
+        filterSheetOpen={filterSheetOpen}
+        sheetTriggerRef={sheetTriggerRef}
+        onSelectType={(value) => updateQuery({ type: value })}
+        onSelectSort={(value) => setSingleFilter("sort", value)}
+        onToggleGenre={toggleGenre}
+        onClearGenres={() => setSingleFilter("genre", "")}
+        onOpenFilters={openFilterSheet}
+        onFilterChange={setSingleFilter}
+        onRemoveFilter={removeFilter}
+        onClearFilters={resetFilters}
+      />
 
-      <section className="discover-type-controls" aria-label="Filter by genre">
-        <div
-          className="discover-genre-row"
-          role="group"
-          aria-label="Filter by genre"
-        >
-          <button
-            type="button"
-            className={`discover-genre-chip${!selectedGenres.length ? " is-active" : ""}`}
-            aria-pressed={!selectedGenres.length}
-            onClick={() => setSingleFilter("genre", "")}
-          >
-            All genres
-          </button>
-          {genres.map((genre) => (
-            <button
-              type="button"
-              key={genre.id}
-              className={`discover-genre-chip${selectedGenres.includes(genre.name) ? " is-active" : ""}`}
-              aria-pressed={selectedGenres.includes(genre.name)}
-              onClick={() => {
-                const nextGenres = selectedGenres.includes(genre.name)
-                  ? selectedGenres.filter((name) => name !== genre.name)
-                  : [...selectedGenres, genre.name];
-                updateQuery({ genre: nextGenres.join(",") });
-              }}
-            >
-              {genre.name}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="discover-filter-controls" aria-label="Additional filters">
-        <div className="discover-filter-desktop">
-          <FilterFields
-            values={appliedFilters}
-            options={filterOptions}
-            onChange={setSingleFilter}
-          />
-        </div>
-        <button
-          ref={sheetTriggerRef}
-          className="discover-filter-trigger"
-          type="button"
-          aria-expanded={filterSheetOpen}
-          aria-controls="discover-filter-sheet"
-          onClick={() => {
-            setDraftFilters(appliedFilters);
-            setFilterSheetOpen(true);
-          }}
-        >
-          Filters
-          {activeFilterCount > 0 && (
-            <span className="discover-filter-count" aria-label={`${activeFilterCount} active filters`}>
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
-      </section>
-
-      {activeFilters.length > 0 && (
-        <section className="discover-active-filters" aria-label="Active filters">
-          <span>Filtering by</span>
-          {activeFilters.map(([name, value]) => (
-            <button
-              type="button"
-              key={`${name}-${value}`}
-              className="discover-active-chip"
-              onClick={() => removeFilter(name, value)}
-              aria-label={`Remove ${name} filter: ${value}`}
-            >
-              {value}
-              <span aria-hidden="true">×</span>
-            </button>
-          ))}
-          <button
-            type="button"
-            className="discover-clear-filters"
-            onClick={resetFilters}
-          >
-            Clear filters
-          </button>
-        </section>
-      )}
-
-      <section className="discover-results" aria-labelledby="results-title">
-        <div className="discover-results-heading">
-          <h2 id="results-title">Titles</h2>
-          {!catalogLoading && !searchLoading && canRenderResults && (
-            <p aria-live="polite">
-              {filteredItems.length}{" "}
-              {filteredItems.length === 1 ? "title" : "titles"}
-            </p>
-          )}
-        </div>
-
-        {(catalogError || searchError || genresError) && (
-          <div className="discover-error" role="alert">
-          <p>{[catalogError, searchError, genresError].filter(Boolean).join(" ")}</p>
-            <button
-              type="button"
-              onClick={() => {
-                if (catalogError) setCatalogAttempt((attempt) => attempt + 1);
-                if (searchError) setSearchAttempt((attempt) => attempt + 1);
-                if (genresError) setGenreAttempt((attempt) => attempt + 1);
-              }}
-            >
-              Retry
-            </button>
-          </div>
-        )}
-
-        {(catalogLoading || searchLoading) && (
-          <div className="discover-grid" aria-label="Loading titles">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div
-                key={index}
-                className="discover-card discover-card-skeleton skeleton-card"
-                aria-hidden="true"
-              >
-                <span />
-                <div>
-                  <i />
-                  <i />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {paginationError && (
-          <div className="discover-error" role="alert">
-            <p>{paginationError}</p>
-            <button type="button" onClick={loadMoreResults}>
-              Retry
-            </button>
-          </div>
-        )}
-
-        {!catalogLoading && !searchLoading && canRenderResults ? (
-          <>
-            {filteredItems.length > 0 ? (
-              <>
-                <div className="discover-grid">
-                  {visibleItems.map((movie, index) => (
-                    <MediaCard
-                      key={movie.id ?? `${movie.title}-${index}`}
-                      movie={movie}
-                    />
-                  ))}
-                  {hasMore && (
-                    <div
-                      ref={loadMoreRef}
-                      className="discover-load-sentinel"
-                      aria-hidden="true"
-                    />
-                  )}
-                </div>
-                {hasMore && (
-                  <button
-                    type="button"
-                    className="discover-load-more"
-                    onClick={loadMoreResults}
-                    disabled={loadingMore}
-                  >
-                    {loadingMore ? "Loading…" : "Load more"}
-                  </button>
-                )}
-              </>
-            ) : (
-              <div className="discover-empty">
-                <h3>{term ? "No matching titles" : "No titles to show"}</h3>
-                <p>
-                  {term
-                    ? "Try a different search or remove some filters."
-                    : "The catalog has no titles matching these filters."}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (term) {
-                      updateQuery({ term: "" });
-                      setInputValue("");
-                    } else if (
-                      activeFilterCount > 0 ||
-                      selectedType !== "movie" ||
-                      selectedSort !== "relevance"
-                    ) {
-                      resetFilters();
-                    } else {
-                      setCatalogAttempt((attempt) => attempt + 1);
-                    }
-                  }}
-                >
-                  {term
-                    ? "Clear search"
-                    : activeFilterCount > 0 ||
-                        selectedType !== "movie" ||
-                        selectedSort !== "relevance"
-                      ? "Reset filters"
-                      : "Retry catalog"}
-                </button>
-              </div>
-            )}
-          </>
-        ) : null}
-      </section>
+      <DiscoverResults
+        term={term}
+        filteredItems={filteredItems}
+        visibleItems={filteredItems}
+        hasMore={hasMore}
+        loadingMore={loadingMore}
+        catalogLoading={catalogLoading}
+        searchLoading={searchLoading}
+        canRenderResults={canRenderResults}
+        catalogError={catalogError}
+        searchError={searchError}
+        genresError={genresError}
+        paginationError={paginationError}
+        activeFilterCount={activeFilterCount}
+        selectedType={selectedType}
+        selectedSort={selectedSort}
+        loadMoreRef={loadMoreRef}
+        onRetry={retryResults}
+        onLoadMore={loadMoreResults}
+        onEmptyAction={handleEmptyAction}
+      />
 
       {filterSheetOpen && (
-        <div className="discover-filter-overlay">
-          <button
-            className="discover-filter-backdrop"
-            type="button"
-            aria-label="Close filters"
-            onClick={() => setFilterSheetOpen(false)}
-          />
-          <section
-            id="discover-filter-sheet"
-            ref={filterSheetRef}
-            className="discover-filter-sheet"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="filter-sheet-title"
-          >
-            <div className="discover-filter-sheet-heading">
-              <h2 id="filter-sheet-title">Filters</h2>
-              <button
-                type="button"
-                aria-label="Close filters"
-                onClick={() => setFilterSheetOpen(false)}
-              >
-                ×
-              </button>
-            </div>
-            <FilterFields
-              values={draftFilters}
-              options={filterOptions}
-              onChange={setDraftFilter}
-            />
-            <div className="discover-filter-sheet-actions">
-              <button type="button" onClick={resetFilters}>
-                Reset
-              </button>
-              <button
-                type="button"
-                className="is-primary"
-                onClick={() => applyDraftFilters()}
-              >
-                Apply filters
-              </button>
-            </div>
-          </section>
-        </div>
+        <FilterSheet
+          draftFilters={draftFilters}
+          filterOptions={filterOptions}
+          sheetRef={filterSheetRef}
+          onClose={() => setFilterSheetOpen(false)}
+          onChange={setDraftFilter}
+          onReset={resetFilters}
+          onApply={() => applyDraftFilters()}
+        />
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import logo from '../assets/logo.png';
+import logo from '../assets/Logo.png';
 import axios from 'axios';
 
 export default function ForgotPassword() {
@@ -14,7 +14,7 @@ export default function ForgotPassword() {
 
     try {
       // Send a request to the backend to initiate the password reset process
-      const response = await axios.post("/api/forgot-password", { email });
+      await axios.post("/api/forgot-password", { email });
       setMessage("Password reset link has been sent to your email.");
     } catch (err) {
       setError(err.response?.data?.message || "An error occurred. Please try again.");
@@ -25,7 +25,7 @@ export default function ForgotPassword() {
     <div className="bg-gray-900 text-white min-h-screen">
       <div className="flex justify-center items-center h-screen">
         <div className="flex flex-col justify-center items-center space-y-4">
-          <img src={logo} className="w-40 h-10" alt="Logo" />
+          <img src={logo} className="h-10 w-auto object-contain" alt="Logo" />
           <div className="bg-gray-800 p-8 rounded-lg shadow-md w-96">
             <h2 className="text-white text-3xl text-center font-bold mb-6">Forgot Password</h2>
 

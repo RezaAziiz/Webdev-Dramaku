@@ -1,0 +1,151 @@
+.ui-select {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.ui-select.is-open {
+  z-index: 130;
+}
+
+.ui-select-trigger {
+  display: inline-flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 12px 0 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms var(--ease-standard),
+    background-color 160ms var(--ease-standard);
+}
+
+.ui-select-trigger:hover:not(:disabled) {
+  border-color: var(--white-18);
+  background: var(--white-04);
+}
+
+.ui-select-trigger:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.ui-select-trigger:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.ui-select.is-open .ui-select-trigger {
+  border-color: var(--accent);
+}
+
+.ui-select-value {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-select-trigger > svg {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  transition: transform 180ms var(--ease-standard);
+}
+
+.ui-select.is-open .ui-select-trigger > svg {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+.ui-select-menu {
+  position: absolute;
+  z-index: 120;
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+  display: grid;
+  max-height: min(46vh, 320px);
+  gap: 4px;
+  padding: 8px;
+  overflow-y: auto;
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  background: var(--glass-fallback);
+  box-shadow: var(--shadow-popover);
+  -webkit-backdrop-filter: blur(28px) saturate(145%);
+  backdrop-filter: blur(28px) saturate(145%);
+}
+
+.ui-select.is-dropup .ui-select-menu {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+
+.ui-select-option {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ui-select-option:hover,
+.ui-select-option.is-active {
+  border-color: var(--white-18);
+  outline: none;
+  background: var(--white-10);
+}
+
+.ui-select-option.is-selected {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: var(--accent-soft);
+}
+
+.ui-select-option.is-selected > svg {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-size: 0.95rem;
+}
+
+/* Detail page usages keep the pill trigger language */
+.ui-select--pill .ui-select-trigger,
+.detail-season-select .ui-select-trigger,
+.detail-comment-field .ui-select-trigger {
+  padding-inline: 16px;
+  border-radius: var(--radius-pill);
+}
+
+.detail-season-select.ui-select {
+  width: max-content;
+  max-width: min(320px, 100%);
+}
+
+.detail-comment-field .ui-select {
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-select-trigger > svg {
+    transition: none;
+  }
+}

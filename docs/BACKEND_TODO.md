@@ -35,6 +35,11 @@ The frontend redesign needs a few product fields that the current API contract d
    - Return stable media type, genre names/IDs, release year/date, rating, language, country, poster, and synopsis fields where available so the filters and suggestion rows can be complete.
    - Define the suggestion response shape and include `id`, `title`, `images`, `year`, and `type` only when those values exist.
 
+7. Account-bound genre preferences
+   - Extend the registration contract to optionally accept genre IDs from `GET /api/genres`.
+   - Persist those preferences on the account and expose them to the authenticated client for recommendations.
+   - Until this is available, registration preferences are stored locally per email address and are not synced between devices or used as an account setting.
+
 ## Notes
 
 - Do not fabricate `Match`, `left`, `top`, or ranking-style values in the frontend.

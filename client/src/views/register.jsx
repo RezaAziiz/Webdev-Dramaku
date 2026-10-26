@@ -1,23 +1,69 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // Import useNavigate for navigation
-import logo from "../assets/logo.png";
-import { apiUrl } from "../config/api";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
+import { Link, useNavigate } from "react-router-dom";
+import { LuCheck, LuEye, LuEyeOff } from "react-icons/lu";
+import AuthShowcase from "../components/auth/AuthShowcase";
+import { normalizeGenre } from "../adapters/mediaAdapter";
+import { GOOGLE_CLIENT_ID, apiUrl } from "../config/api";
+import { useAuth } from "../contexts/AuthContext";
+import { getGenres } from "../services/catalogService";
+import { unwrapList } from "../lib/media";
+
+const PREFERENCE_STORAGE_KEY = "dramaku.genrePreferences";
 
 export default function Register() {
+  const [step, setStep] = useState(1);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [selectedGenres, setSelectedGenres] = useState([]);
+  const [genres, setGenres] = useState([]);
+  const [genresLoading, setGenresLoading] = useState(true);
+  const [genresError, setGenresError] = useState("");
+  const [genreAttempt, setGenreAttempt] = useState(0);
   const [error, setError] = useState("");
-  const navigate = useNavigate(); // Create navigate function for redirection
+  const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const validateForm = () => {
-    if (!username || username.length < 3) {
+  useEffect(() => {
+    let current = true;
+    setGenresLoading(true);
+    setGenresError("");
+
+    getGenres()
+      .then((response) => {
+        if (!current) return;
+        const items = unwrapList(response)
+          .filter((item) => item && typeof item === "object")
+          .map(normalizeGenre)
+          .filter((genre) => genre !== null);
+        setGenres(items);
+      })
+      .catch((requestError) => {
+        if (!current) return;
+        console.error("Unable to load registration genres.", requestError);
+        setGenresError("Genres are unavailable right now. You can skip this step.");
+      })
+      .finally(() => {
+        if (current) setGenresLoading(false);
+      });
+
+    return () => {
+      current = false;
+    };
+  }, [genreAttempt]);
+
+  const validateAccountDetails = () => {
+    if (username.trim().length < 3) {
       setError("Username must be at least 3 characters long.");
       return false;
     }
-    if (!email.includes("@")) {
-      setError("Please enter a valid email.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError("Enter a valid email address.");
       return false;
     }
     if (password.length < 6) {
@@ -27,107 +73,331 @@ export default function Register() {
     return true;
   };
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
+  const continueToGenres = (event) => {
+    event.preventDefault();
+    setError("");
+    if (!validateAccountDetails()) return;
+    setStep(2);
+  };
+
+  const completeRegistration = async (event, skipPersonalization = false) => {
+    event?.preventDefault();
     setError("");
     setMessage("");
+    if (!validateAccountDetails()) {
+      setStep(1);
+      return;
+    }
+    if (
+      !skipPersonalization &&
+      selectedGenres.length < 3 &&
+      genres.length >= 3
+    ) {
+      setError("Choose at least 3 genres, or skip personalization for now.");
+      return;
+    }
 
-    if (!validateForm()) return;
-
+    setIsSubmitting(true);
     try {
       const response = await fetch(apiUrl("/register"), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, email, password }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: username.trim(),
+          email: email.trim(),
+          password,
+        }),
       });
-
       const data = await response.json();
 
-      if (response.ok) {
-        setMessage("Registration successful! Your role is: ");
-        setTimeout(() => navigate("/login"), 2000); // Redirect to login page after 2 seconds
-      } else {
-        setError(data.message || "Registration failed.");
+      if (!response.ok) {
+        setError(data.message || "We couldn't create your account. Try again.");
+        return;
       }
-    } catch (error) {
-      setError("Something went wrong. Please try again.");
+
+      let preferenceSaveFailed = false;
+      try {
+        const preferenceKey = `${PREFERENCE_STORAGE_KEY}:${email
+          .trim()
+          .toLowerCase()}`;
+        window.localStorage.setItem(preferenceKey, JSON.stringify(
+          skipPersonalization ? [] : selectedGenres,
+        ));
+      } catch (storageError) {
+        console.error("Unable to save local genre preferences.", storageError);
+        preferenceSaveFailed = true;
+      }
+
+      setMessage(
+        preferenceSaveFailed
+          ? "Your account was created, but your genre choices couldn't be saved on this device."
+          : "Account created. Your genre choices are saved on this device for now.",
+      );
+      window.setTimeout(() => navigate("/login", { replace: true }), 2000);
+    } catch (requestError) {
+      console.error("Account registration failed.", requestError);
+      setError("We couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  const handleGoogleSignup = async (credentialResponse) => {
+    if (!credentialResponse.credential) {
+      setError("Google sign-up did not return a credential. Please try again.");
+      return;
+    }
+    setError("");
+    setIsSubmitting(true);
+    try {
+      const response = await axios.post(apiUrl("/google-login"), {
+        token: credentialResponse.credential,
+      });
+      if (!login(response.data.token)) {
+        setError("We couldn't start your session. Please try again.");
+        return;
+      }
+      navigate("/", { replace: true });
+    } catch (requestError) {
+      setError(
+        requestError.response?.status === 403
+          ? "Your account has been suspended."
+          : "Google sign-up failed. Please try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const toggleGenre = (genreName) => {
+    setSelectedGenres((current) =>
+      current.includes(genreName)
+        ? current.filter((name) => name !== genreName)
+        : [...current, genreName],
+    );
+  };
+
   return (
-    <div className="bg-gray-900 text-white min-h-screen">
-      <div className="flex justify-center items-center h-screen">
-        <div className="flex flex-col justify-center items-center space-y-4">
-          <img src={logo} className="w-40 h-10" alt="Logo" />
-          <div className="bg-gray-800 p-8 rounded-lg shadow-md w-96">
-            <h2 className="text-white text-3xl text-center font-bold mb-6">
-              Register
-            </h2>
-
-            {error && <p className="text-red-500 text-center">{error}</p>}
-            {message && <p className="text-green-500 text-center">{message}</p>}
-
-            <form onSubmit={handleRegister}>
-              <div className="mb-4">
-                <input
-                  className="w-full p-2 rounded bg-gray-900 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  type="text"
-                  id="username"
-                  name="username"
-                  placeholder="Username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <div className="auth-page">
+        <AuthShowcase mode="register" />
+        <main className="auth-main">
+          <div className="auth-content">
+            <div className="auth-progress" aria-label={`Step ${step} of 2`}>
+              <div className="auth-progress-label">
+                <span>Step {step} of 2</span>
+                <span>{step === 1 ? "Your account" : "Personalization"}</span>
               </div>
-
-              <div className="mb-4">
-                <input
-                  className="w-full p-2 rounded bg-gray-900 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  type="email"
-                  id="email"
-                  name="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+              <div className="auth-progress-track" aria-hidden="true">
+                <span className="is-complete" />
+                <span className={step === 2 ? "is-complete" : ""} />
               </div>
+            </div>
 
-              <div className="mb-6">
-                <input
-                  className="w-full p-2 rounded bg-gray-900 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  type="password"
-                  id="password"
-                  name="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
+            {step === 1 ? (
+              <>
+                <header className="auth-heading">
+                  <h1>Create your account</h1>
+                  <p>Set up your account to start watching.</p>
+                </header>
 
-              <div className="flex flex-col space-y-4">
-                <button
-                  type="submit"
-                  className="w-full bg-teal-500 hover:bg-teal-600 text-white p-2 rounded focus:outline-none focus:ring-2 focus:ring-teal-500"
-                >
-                  Register
-                </button>
+                {error && (
+                  <p className="auth-message is-error" role="alert">
+                    {error}
+                  </p>
+                )}
 
-                <a
-                  href="/login"
-                  className="w-full bg-teal-500 hover:bg-teal-600 text-white p-2 rounded text-center focus:outline-none focus:ring-2 focus:ring-teal-500"
-                >
-                  Sign in
-                </a>
-              </div>
-            </form>
+                <div className="auth-google">
+                  <GoogleLogin
+                    text="signup_with"
+                    shape="pill"
+                    theme="outline"
+                    onSuccess={handleGoogleSignup}
+                    onError={() =>
+                      setError("Google sign-up failed. Please try again.")
+                    }
+                  />
+                </div>
+                <div className="auth-divider" aria-hidden="true">
+                  OR
+                </div>
+
+                <form className="auth-form" onSubmit={continueToGenres}>
+                  <div className="auth-field">
+                    <label htmlFor="register-email">Email</label>
+                    <input
+                      id="register-email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="auth-field">
+                    <label htmlFor="register-username">Username</label>
+                    <input
+                      id="register-username"
+                      name="username"
+                      type="text"
+                      autoComplete="username"
+                      placeholder="Choose a username"
+                      value={username}
+                      onChange={(event) => setUsername(event.target.value)}
+                      minLength={3}
+                      required
+                    />
+                  </div>
+                  <div className="auth-field">
+                    <label htmlFor="register-password">Password</label>
+                    <div className="auth-password-field">
+                      <input
+                        id="register-password"
+                        name="password"
+                        type={passwordVisible ? "text" : "password"}
+                        autoComplete="new-password"
+                        placeholder="At least 6 characters"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        minLength={6}
+                        required
+                      />
+                      <button
+                        className="auth-password-toggle"
+                        type="button"
+                        aria-label={
+                          passwordVisible ? "Hide password" : "Show password"
+                        }
+                        aria-pressed={passwordVisible}
+                        onClick={() =>
+                          setPasswordVisible((visible) => !visible)
+                        }
+                      >
+                        {passwordVisible ? <LuEyeOff /> : <LuEye />}
+                      </button>
+                    </div>
+                  </div>
+                  <button className="auth-button" type="submit">
+                    Continue
+                  </button>
+                </form>
+
+                <p className="auth-switch">
+                  Already have an account?{" "}
+                  <Link className="auth-inline-link" to="/login">
+                    Sign in
+                  </Link>
+                </p>
+              </>
+            ) : (
+              <>
+                <header className="auth-heading">
+                  <h1>Choose your favorite genres</h1>
+                  <p className="auth-step-copy">
+                    Pick at least 3 so your recommendations feel more personal.
+                  </p>
+                </header>
+
+                {error && (
+                  <p className="auth-message is-error" role="alert">
+                    {error}
+                  </p>
+                )}
+                {message && (
+                  <p className="auth-message is-success" role="status">
+                    {message}
+                  </p>
+                )}
+
+                {genresLoading ? (
+                  <p className="auth-genre-status" role="status">
+                    Loading genres…
+                  </p>
+                ) : genresError ? (
+                  <div className="auth-content">
+                    <p className="auth-genre-status" role="alert">
+                      {genresError}
+                    </p>
+                    <button
+                      className="auth-button auth-button-secondary"
+                      type="button"
+                      onClick={() => setGenreAttempt((attempt) => attempt + 1)}
+                    >
+                      Try loading genres again
+                    </button>
+                  </div>
+                ) : genres.length ? (
+                  <div
+                    className="auth-genre-list"
+                    role="group"
+                    aria-label="Choose your favorite genres"
+                  >
+                    {genres.map((genre) => {
+                      const selected = selectedGenres.includes(genre.name);
+                      return (
+                        <button
+                          key={genre.id}
+                          className={`auth-genre-chip${selected ? " is-selected" : ""}`}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => toggleGenre(genre.name)}
+                        >
+                          {selected && <LuCheck aria-hidden="true" />}
+                          {genre.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="auth-genre-status" role="status">
+                    No genres are available. You can still create your account.
+                  </p>
+                )}
+
+                <p className="auth-genre-status" aria-live="polite">
+                  {selectedGenres.length} selected
+                </p>
+
+                <div className="auth-step-actions">
+                  <button
+                    className="auth-button"
+                    type="button"
+                    onClick={completeRegistration}
+                    disabled={
+                      isSubmitting ||
+                      genresLoading ||
+                      (genres.length >= 3 && selectedGenres.length < 3)
+                    }
+                  >
+                    {isSubmitting ? "Creating account…" : "Create account"}
+                  </button>
+                  <button
+                    className="auth-back-button"
+                    type="button"
+                    onClick={() => completeRegistration(undefined, true)}
+                    disabled={isSubmitting || genresLoading}
+                  >
+                    Skip personalization for now
+                  </button>
+                  <button
+                    className="auth-back-button"
+                    type="button"
+                    onClick={() => {
+                      setError("");
+                      setStep(1);
+                    }}
+                    disabled={isSubmitting}
+                  >
+                    Back to account details
+                  </button>
+                </div>
+              </>
+            )}
           </div>
-        </div>
+        </main>
       </div>
-    </div>
+    </GoogleOAuthProvider>
   );
 }

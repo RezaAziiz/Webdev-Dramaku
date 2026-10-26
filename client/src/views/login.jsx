@@ -1,38 +1,36 @@
 import React, { useState } from "react";
-import logo from "../assets/logo.png";
 import axios from "axios";
-import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
-import { useNavigate } from "react-router-dom";
+import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
+import { Link, useNavigate } from "react-router-dom";
+import { LuEye, LuEyeOff } from "react-icons/lu";
+import AuthShowcase from "../components/auth/AuthShowcase";
 import { useAuth } from "../contexts/AuthContext";
 import { GOOGLE_CLIENT_ID, apiUrl } from "../config/api";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [error, setError] = useState("");
   const { login, logout } = useAuth();
   const navigate = useNavigate();
 
-  // Validate username can either be email or standard username
   const validateInput = (input) => {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const usernamePattern = /^[a-zA-Z0-9._-]{3,}$/; // Allows letters, numbers, dots, underscores, min 3 chars
+    const usernamePattern = /^[a-zA-Z0-9._-]{3,}$/;
     return emailPattern.test(input) || usernamePattern.test(input);
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  const handleLogin = async (event) => {
+    event.preventDefault();
     setError("");
 
-    // Input validation
     if (!validateInput(username)) {
-      setError(
-        "Please enter a valid email or username (at least 3 characters).",
-      );
+      setError("Enter a valid email address or username.");
       return;
     }
 
-    if (!password || password.length < 6) {
+    if (password.length < 6) {
       setError("Password must be at least 6 characters long.");
       return;
     }
@@ -43,112 +41,138 @@ export default function Login() {
         password,
       });
 
-      // Check for banned status in the response
       if (response.data.banned) {
-        setError("Your account has been banned. Please contact support.");
+        setError("Your account has been suspended. Please contact support.");
         logout();
-        return; // Prevent further execution
+        return;
       }
 
       if (!login(response.data.token)) {
-        setError("Login returned an invalid session. Please try again.");
+        setError("We couldn't start your session. Please try again.");
         return;
       }
       navigate("/", { replace: true });
-    } catch (error) {
-      if (error.response?.status === 403) {
-        setError("Your account has been banned. Please contact support.");
-      } else {
-        setError("Login failed. Please check your credentials.");
-      }
+    } catch (requestError) {
+      setError(
+        requestError.response?.status === 403
+          ? "Your account has been suspended. Please contact support."
+          : "Sign in failed. Check your details and try again.",
+      );
     }
   };
 
   const handleGoogleLoginSuccess = async (credentialResponse) => {
-    try {
-      const token = credentialResponse.credential;
-      const response = await axios.post(apiUrl("/google-login"), { token });
+    if (!credentialResponse.credential) {
+      setError("Google sign-in did not return a credential. Please try again.");
+      return;
+    }
 
+    try {
+      const response = await axios.post(apiUrl("/google-login"), {
+        token: credentialResponse.credential,
+      });
       if (!login(response.data.token)) {
-        setError("Login returned an invalid session. Please try again.");
+        setError("We couldn't start your session. Please try again.");
         return;
       }
       navigate("/", { replace: true });
-    } catch (error) {
+    } catch (requestError) {
       setError(
-        error.response?.status === 403
-          ? "Your account has been banned."
+        requestError.response?.status === 403
+          ? "Your account has been suspended."
           : "Google sign-in failed. Please try again.",
       );
     }
   };
 
-  const handleGoogleLoginError = () => {
-    setError("Account is banned and cannot login");
-  };
-
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <div className="bg-gray-900 text-white min-h-screen flex flex-col justify-center items-center">
-        <div className="flex flex-col justify-center items-center space-y-4">
-          <img src={logo} className="w-40 h-10" alt="Logo" />
+      <div className="auth-page">
+        <AuthShowcase mode="login" />
+        <main className="auth-main">
+          <div className="auth-content">
+            <header className="auth-heading">
+              <h1>Welcome back</h1>
+              <p>Sign in to continue watching.</p>
+            </header>
 
-          <div className="bg-gray-800 p-8 rounded-lg shadow-md w-96">
-            <h1 className="text-white text-2xl text-center font-bold mb-3">
-              Login
-            </h1>
+            {error && (
+              <p className="auth-message is-error" role="alert">
+                {error}
+              </p>
+            )}
 
-            {error && <p className="text-red-500 text-center">{error}</p>}
-
-            <div className="mb-4">
-              <input
-                className="w-full p-2 rounded bg-gray-900 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-                type="text"
-                id="username"
-                name="username"
-                placeholder="Username or Email"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+            <div className="auth-google">
+              <GoogleLogin
+                text="continue_with"
+                shape="pill"
+                theme="outline"
+                onSuccess={handleGoogleLoginSuccess}
+                onError={() =>
+                  setError("Google sign-in failed. Please try again.")
+                }
               />
             </div>
 
-            <div className="mb-6">
-              <input
-                className="w-full p-2 rounded bg-gray-900 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-                type="password"
-                id="password"
-                name="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+            <div className="auth-divider" aria-hidden="true">
+              OR
             </div>
 
-            <div className="flex flex-col space-y-4">
-              <button
-                onClick={handleLogin}
-                className="w-full bg-teal-500 hover:bg-teal-600 text-white p-2 rounded focus:outline-none focus:ring-2 focus:ring-teal-500"
-              >
+            <form className="auth-form" onSubmit={handleLogin}>
+              <div className="auth-field">
+                <label htmlFor="login-username">Email or username</label>
+                <input
+                  id="login-username"
+                  name="username"
+                  type="text"
+                  autoComplete="username"
+                  placeholder="you@example.com"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="auth-field">
+                <div className="auth-password-row">
+                  <label htmlFor="login-password">Password</label>
+                </div>
+                <div className="auth-password-field">
+                  <input
+                    id="login-password"
+                    name="password"
+                    type={passwordVisible ? "text" : "password"}
+                    autoComplete="current-password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
+                  />
+                  <button
+                    className="auth-password-toggle"
+                    type="button"
+                    aria-label={passwordVisible ? "Hide password" : "Show password"}
+                    aria-pressed={passwordVisible}
+                    onClick={() => setPasswordVisible((visible) => !visible)}
+                  >
+                    {passwordVisible ? <LuEyeOff /> : <LuEye />}
+                  </button>
+                </div>
+              </div>
+
+              <button className="auth-button" type="submit">
                 Sign in
               </button>
+            </form>
 
-              <GoogleLogin
-                onSuccess={handleGoogleLoginSuccess}
-                onError={handleGoogleLoginError}
-              />
-            </div>
-
-            <div className="text-center mt-6">
-              <p className="text-white text-sm">Don't have an account?</p>
-              <a
-                href="/register"
-                className=" text-white text-sm hover:underline font-bold"
-              >
-                Register
-              </a>
-            </div>
+            <p className="auth-switch">
+              Don&apos;t have an account?{" "}
+              <Link className="auth-inline-link" to="/register">
+                Create account
+              </Link>
+            </p>
           </div>
-        </div>
+        </main>
       </div>
     </GoogleOAuthProvider>
   );

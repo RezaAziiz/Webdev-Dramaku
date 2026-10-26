@@ -1,14 +1,11 @@
 import { Link } from "react-router-dom";
-import { LuClapperboard } from "react-icons/lu";
+import logo from "../assets/Logo.png";
 
 const Footer = () => (
   <footer className="site-footer">
     <div className="site-footer-main">
-      <Link className="brand-mark site-footer-brand" to="/" aria-label="Dramaku home">
-        <span className="brand-icon" aria-hidden="true">
-          <LuClapperboard />
-        </span>
-        <span>Dramaku</span>
+      <Link className="brand-mark site-footer-brand" to="/" aria-label="Lumo home">
+        <img className="brand-logo" src={logo} alt="Lumo" />
       </Link>
       <p className="site-footer-note">
         Discover films and series from the catalog.
@@ -27,7 +24,7 @@ const Footer = () => (
         This product uses the TMDB API but is not endorsed or certified by
         TMDB.
       </p>
-      <span>© {new Date().getFullYear()} Dramaku</span>
+      <span>© {new Date().getFullYear()} Lumo</span>
     </div>
   </footer>
 );

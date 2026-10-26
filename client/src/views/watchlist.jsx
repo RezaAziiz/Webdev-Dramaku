@@ -4,8 +4,8 @@ import CardMovie from "../components/cardMovie";
 import { useAuth } from "../contexts/AuthContext";
 import { getWatchlist, removeFromWatchlist } from "../services/watchlistService";
 import { getMovieDetails } from "../services/movieService";
+import { TMDB_POSTER_SIZE, tmdbImageUrl } from "../lib/media";
 
-const IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 const PLACEHOLDER_POSTER =
   "https://via.placeholder.com/300x450?text=No+Image+Available";
 
@@ -15,7 +15,7 @@ const toDisplayItem = (tmdbId, mediaType, details) => ({
   mediaType,
   title: details?.title || details?.name || "Title Not Available",
   poster: details?.poster_path
-    ? `${IMAGE_BASE}${details.poster_path}`
+    ? tmdbImageUrl(details.poster_path, TMDB_POSTER_SIZE)
     : PLACEHOLDER_POSTER,
   year: (details?.release_date || details?.first_air_date || "").slice(0, 4),
   genre: (details?.genres || []).map((g) => g.name).join(", "),

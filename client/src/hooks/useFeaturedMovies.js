@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { getFeaturedMovies } from "../services/movieService";
+import { normalizeMovie } from "../adapters/mediaAdapter";
+import { unwrapList } from "../lib/media";
 
 const useFeaturedMovies = () => {
   const [featuredMovies, setFeaturedMovies] = useState([]);
@@ -15,7 +17,7 @@ const useFeaturedMovies = () => {
       try {
         const data = await getFeaturedMovies();
         if (isMounted) {
-          setFeaturedMovies(Array.isArray(data) ? data : []);
+          setFeaturedMovies(unwrapList(data).map(normalizeMovie));
         }
       } catch (err) {
         if (isMounted) {
