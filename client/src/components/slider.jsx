@@ -94,7 +94,7 @@ const Slider = ({ fallbackMovies = [] }) => {
           alt=""
           aria-hidden="true"
           loading="eager"
-          fetchPriority="low"
+          fetchpriority="low"
         />
       )}
       <section className="hero-shell" aria-label="Featured titles">
@@ -116,7 +116,7 @@ const Slider = ({ fallbackMovies = [] }) => {
                     src={imageUrl}
                     alt={movie.title || ""}
                     className="hero-slide-image"
-                    fetchPriority={index === currentSlide ? "high" : "auto"}
+                    fetchpriority={index === currentSlide ? "high" : "auto"}
                   />
                 )}
                 <div className="hero-slide-overlay" />

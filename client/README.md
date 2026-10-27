@@ -13,6 +13,20 @@ REACT_APP_GOOGLE_CLIENT_ID=your-google-client-id
 
 The API URL and Google client ID currently have production defaults. Restart the development server after changing environment values.
 
+In development, if `REACT_APP_API_URL` uses `localhost` or `127.0.0.1`, the app
+automatically uses the hostname from the browser address instead. This lets a
+phone on the same Wi-Fi reach the backend running on your computer. Make sure
+the backend is running on port `3005` and that both devices are on the same
+network.
+
+Google sign-in also checks the website origin in Google Cloud Console. Add
+each web origin under **APIs & Services → Credentials → OAuth 2.0 Client IDs →
+Authorized JavaScript origins**. `http://localhost:3000` is suitable for local
+desktop development; a phone accessing the app by a LAN IP needs an HTTPS
+origin allowed by Google, so use the deployed HTTPS site or an HTTPS development
+host and add that exact origin. If the OAuth consent screen is in testing mode,
+the Google account must also be listed as a test user.
+
 ## Available Scripts
 
 In the project directory, you can run:

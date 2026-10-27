@@ -109,7 +109,9 @@ export default function Login() {
                 theme="outline"
                 onSuccess={handleGoogleLoginSuccess}
                 onError={() =>
-                  setError("Google sign-in failed. Please try again.")
+                  setError(
+                    "Google blocked sign-in for this site. Check that its HTTPS origin is listed in Google Cloud Console under Authorized JavaScript origins.",
+                  )
                 }
               />
             </div>

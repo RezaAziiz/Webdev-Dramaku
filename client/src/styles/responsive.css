@@ -72,6 +72,7 @@
 
   .trending-card {
     flex-basis: 60%;
+    aspect-ratio: 16 / 9;
   }
 
   .media-section[aria-labelledby="added-title"] .section-header--inline {
@@ -86,6 +87,11 @@
 
   .just-added-card {
     flex-basis: 56%;
+    aspect-ratio: 16 / 9;
+  }
+
+  .genre-view-all-card {
+    min-width: 320px;
   }
 
   .hero-reel {
@@ -226,6 +232,7 @@
 
   .continue-card {
     scroll-snap-align: unset;
+    aspect-ratio: 16 / 9;
   }
 
   .genre-track {
@@ -244,6 +251,7 @@
   .genre-result-card,
   .genre-view-all-card {
     min-height: 248px;
+    aspect-ratio: 16 / 9;
     border-color: var(--white-18);
     box-shadow: var(--shadow-nav);
   }
@@ -266,6 +274,7 @@
 
   .just-added-card {
     flex-basis: 34%;
+    aspect-ratio: 16 / 9;
   }
 
   .hero-content {

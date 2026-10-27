@@ -88,7 +88,7 @@ const DiscoverResults = ({
             <div className="discover-grid">
               {visibleItems.map((movie, index) => (
                 <MediaCard
-                  key={movie.id ?? `${movie.title}-${index}`}
+                  key={`${movie.type || "media"}-${movie.id ?? `${movie.title}-${index}`}`}
                   movie={movie}
                 />
               ))}

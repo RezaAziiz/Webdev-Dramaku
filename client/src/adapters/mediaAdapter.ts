@@ -22,6 +22,8 @@ export type MediaItem = {
 export type GenreItem = {
   id: string | number;
   name: string;
+  movieId?: string | number | null;
+  tvId?: string | number | null;
 };
 
 export type MediaPalette = {
@@ -134,5 +136,10 @@ export const normalizeGenre = (genre: RawMedia): GenreItem | null => {
   const id = asIdentifier(genre.id) ?? asIdentifier(genre._id);
   const name = asString(genre.name) ?? asString(genre.label);
   if (id === null || name === null) return null;
-  return { id, name };
+  return {
+    id,
+    name,
+    movieId: asIdentifier(genre.movieId),
+    tvId: asIdentifier(genre.tvId),
+  };
 };

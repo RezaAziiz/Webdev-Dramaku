@@ -248,9 +248,7 @@ exports.searchNormalized = async (term, page = 1) => {
   return { page: data.page, total_pages: data.total_pages, total_results: data.total_results, results };
 };
 
-// Merges movie + tv genre lists into one deduped-by-name list, since the
-// product doesn't separate genre filters by media type. Movie's id wins on
-// a name collision (both lists mostly share the same ids/names anyway).
+// Merges genre labels while keeping media-specific IDs for discover queries.
 exports.getMergedGenres = async () => {
   const [movieGenres, tvGenres] = await Promise.all([
     tmdbRequest('/genre/movie/list'),
@@ -258,10 +256,27 @@ exports.getMergedGenres = async () => {
   ]);
 
   const byName = new Map();
-  [...movieGenres.genres, ...tvGenres.genres].forEach((genre) => {
+  movieGenres.genres.forEach((genre) => {
     const key = genre.name.toLowerCase();
-    if (!byName.has(key)) {
-      byName.set(key, { id: genre.id, name: genre.name });
+    byName.set(key, {
+      id: genre.id,
+      name: genre.name,
+      movieId: genre.id,
+      tvId: null,
+    });
+  });
+  tvGenres.genres.forEach((genre) => {
+    const key = genre.name.toLowerCase();
+    const existing = byName.get(key);
+    if (existing) {
+      existing.tvId = genre.id;
+    } else {
+      byName.set(key, {
+        id: genre.id,
+        name: genre.name,
+        movieId: null,
+        tvId: genre.id,
+      });
     }
   });
 

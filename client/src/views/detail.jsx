@@ -8,13 +8,11 @@ import * as watchlistService from "../services/watchlistService";
 import * as watchHistoryService from "../services/watchHistoryService";
 import {
   TMDB_BACKDROP_SIZE,
-  TMDB_POSTER_SIZE,
   tmdbImageUrl,
 } from "../lib/media";
 import {
   TIMEUPDATE_SAVE_INTERVAL_MS,
   buildDetailFacts,
-  buildPlayerSrc,
   getRuntimeLabel,
   getStudio,
   getTitle,
@@ -25,10 +23,10 @@ import {
 import DetailHero from "../components/detail/DetailHero";
 import DetailFacts from "../components/detail/DetailFacts";
 import EpisodeList from "../components/detail/EpisodeList";
-import DetailPlayer from "../components/detail/DetailPlayer";
 import CastGrid from "../components/detail/CastGrid";
 import TrailerSection from "../components/detail/TrailerSection";
 import CommentsSection from "../components/detail/CommentsSection";
+import NotificationModal from "../components/ui/NotificationModal";
 
 const MovieDetail = () => {
   const { id, mediaType } = useParams();
@@ -46,12 +44,16 @@ const MovieDetail = () => {
   const [episodes, setEpisodes] = useState([]);
   const [episodesLoading, setEpisodesLoading] = useState(false);
   const [episodesError, setEpisodesError] = useState("");
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    message: "",
+    type: "info",
+  });
   const { isAuthenticated: isLoggedIn, token } = useAuth();
   const navigate = useNavigate();
 
   const isTv = mediaType === "tv";
   const lastProgressSaveRef = useRef(0);
-  const playerRef = useRef(null);
 
   // Title details (raw TMDB passthrough: credits, videos, recommendations).
   useEffect(() => {
@@ -285,30 +287,20 @@ const MovieDetail = () => {
     : [];
   const backdropPath = movie.backdrop_path || movie.poster_path;
   const backdropUrl = tmdbImageUrl(backdropPath, TMDB_BACKDROP_SIZE);
-  const posterUrl = tmdbImageUrl(movie.poster_path, TMDB_POSTER_SIZE);
+  const posterUrl = tmdbImageUrl(movie.poster_path, "w780");
   const runtimeLabel = getRuntimeLabel(movie, isTv);
   const videoId = getTrailerVideoId(movie);
-  const playerSrc = buildPlayerSrc({
-    isTv,
-    id,
-    selectedSeason,
-    selectedEpisode,
-  });
   const facts = buildDetailFacts(movie, isTv, runtimeLabel, country);
-
-  const scrollToPlayer = () => {
-    playerRef.current?.scrollIntoView({
-      behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-      block: "start",
-    });
-  };
 
   const playEpisode = (episodeNumber) => {
     setSelectedEpisode(episodeNumber);
-    window.requestAnimationFrame(scrollToPlayer);
+    navigate(
+      `/watch/tv/${encodeURIComponent(id)}?season=${selectedSeason}&episode=${episodeNumber}`,
+    );
   };
+
+  const openPlayer = () =>
+    navigate(`/watch/${mediaType}/${encodeURIComponent(id)}`);
 
   const handleSelectSeason = (seasonNumber) => {
     setSelectedSeason(seasonNumber);
@@ -317,7 +309,11 @@ const MovieDetail = () => {
 
   const handleCommentSubmit = async () => {
     if (!commentText.trim() || rating === 0) {
-      alert("Please provide a comment and a rating.");
+      setNotification({
+        isOpen: true,
+        message: "Please provide a comment and a rating.",
+        type: "error",
+      });
       return;
     }
 
@@ -337,7 +333,11 @@ const MovieDetail = () => {
       setComments(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error adding comment:", error);
-      alert("Failed to add comment.");
+      setNotification({
+        isOpen: true,
+        message: "Failed to add comment.",
+        type: "error",
+      });
     }
   };
 
@@ -347,12 +347,30 @@ const MovieDetail = () => {
     }
 
     try {
-      await watchlistService.addToWatchlist(Number(id), mediaType, token);
-      setIsInWatchlist(true);
-      alert("Added to your watchlist.");
+      if (isInWatchlist) {
+        await watchlistService.removeFromWatchlist(Number(id), mediaType, token);
+        setIsInWatchlist(false);
+        setNotification({
+          isOpen: true,
+          message: "Removed from your watchlist.",
+          type: "info",
+        });
+      } else {
+        await watchlistService.addToWatchlist(Number(id), mediaType, token);
+        setIsInWatchlist(true);
+        setNotification({
+          isOpen: true,
+          message: "Added to your watchlist.",
+          type: "success",
+        });
+      }
     } catch (error) {
-      console.error("Error adding to watchlist:", error);
-      alert("Failed to add to watchlist.");
+      console.error("Error toggling watchlist:", error);
+      setNotification({
+        isOpen: true,
+        message: "Something went wrong. Please try again.",
+        type: "error",
+      });
     }
   };
 
@@ -383,7 +401,7 @@ const MovieDetail = () => {
         videoId={videoId}
         isInWatchlist={isInWatchlist}
         cast={cast}
-        onPlay={scrollToPlayer}
+        onPlay={openPlayer}
         onAddToWatchlist={handleAddToWatchlist}
       />
 
@@ -434,38 +452,36 @@ const MovieDetail = () => {
           </section>
         )}
 
-        <DetailPlayer
-          playerRef={playerRef}
-          isTv={isTv}
-          selectedSeason={selectedSeason}
-          selectedEpisode={selectedEpisode}
-          playerSrc={playerSrc}
-          title={title}
-        />
-
         <CastGrid cast={cast} />
 
         <TrailerSection videoId={videoId} title={title} />
 
-        <CommentsSection
-          isLoggedIn={isLoggedIn}
-          comments={comments}
-          filterRating={filterRating}
-          isCommentFormVisible={isCommentFormVisible}
-          rating={rating}
-          commentText={commentText}
-          displayComments={displayComments}
-          onFilterRatingChange={setFilterRating}
-          onToggleCommentForm={() =>
-            setIsCommentFormVisible((visible) => !visible)
-          }
-          onRatingChange={setRating}
-          onCommentTextChange={setCommentText}
-          onSubmit={handleCommentSubmit}
-        />
-      </div>
-    </main>
-  );
+      <CommentsSection
+        isLoggedIn={isLoggedIn}
+        comments={comments}
+        filterRating={filterRating}
+        isCommentFormVisible={isCommentFormVisible}
+        rating={rating}
+        commentText={commentText}
+        displayComments={displayComments}
+        onFilterRatingChange={setFilterRating}
+        onToggleCommentForm={() =>
+          setIsCommentFormVisible((visible) => !visible)
+        }
+        onRatingChange={setRating}
+        onCommentTextChange={setCommentText}
+        onSubmit={handleCommentSubmit}
+      />
+    </div>
+    <NotificationModal
+      isOpen={notification.isOpen}
+      message={notification.message}
+      type={notification.type}
+      onClose={() => setNotification({ ...notification, isOpen: false })}
+    />
+  </main>
+);
 };
+
 
 export default MovieDetail;

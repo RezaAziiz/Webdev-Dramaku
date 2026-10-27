@@ -20,10 +20,10 @@ const DetailHero = ({
   <section className="detail-hero" aria-labelledby="detail-title">
     {backdropUrl && (
       <img
-        className="detail-hero-art"
+        className="detail-hero-art detail-hero-art--backdrop"
         src={backdropUrl}
         alt=""
-        fetchPriority="high"
+        fetchpriority="high"
       />
     )}
     <div className="detail-hero-shade" aria-hidden="true" />

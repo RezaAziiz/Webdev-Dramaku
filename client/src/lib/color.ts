@@ -165,7 +165,6 @@ export const computePaletteFromImage = (imageUrl: string): Promise<Palette> =>
 
     const defaultPalette = readDefaultPalette();
     const image = new Image();
-    image.crossOrigin = "anonymous";
     image.onload = () => {
       const canvas = document.createElement("canvas");
       const context = canvas.getContext("2d");

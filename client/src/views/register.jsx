@@ -214,7 +214,9 @@ export default function Register() {
                     theme="outline"
                     onSuccess={handleGoogleSignup}
                     onError={() =>
-                      setError("Google sign-up failed. Please try again.")
+                      setError(
+                        "Google blocked sign-in for this site. Check that its HTTPS origin is listed in Google Cloud Console under Authorized JavaScript origins.",
+                      )
                     }
                   />
                 </div>

@@ -10,6 +10,7 @@ import Users from "./views/cmsUsers";
 import FilteredMovies from "./views/filteredMovies";
 import NotFound from "./views/NotFound";
 import Watchlist from "./views/watchlist";
+import Watch from "./views/watch";
 import ProtectedRoute from "./protectedRoutes/ProtectedRoute";
 import { USER_ROLES } from "./constants/auth";
 
@@ -20,6 +21,7 @@ const AppRoutes = () => {
         <Route index element={<Home />} />
         <Route path="search" element={<SearchResult />} />
         <Route path="movies/:mediaType/:id" element={<Detail />} />
+        <Route path="watch/:mediaType/:id" element={<Watch />} />
         <Route path="filtered-movies" element={<FilteredMovies />} />
         <Route path="watchlist/:username" element={<Watchlist />} />
       </Route>

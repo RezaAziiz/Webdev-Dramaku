@@ -151,21 +151,37 @@ const SearchResult = () => {
     setCatalogPage(1);
     setCatalogTotalPages(1);
 
-    const mediaType = selectedType === "movie" ? "movie" : "tv";
-    const genreIds = buildGenreIds(selectedGenres, genres);
+    const mediaTypes =
+      selectedType === "anime"
+        ? ["movie", "tv"]
+        : [selectedType === "movie" ? "movie" : "tv"];
+    const animationGenreId =
+      genres.find((genre) => genre.name.toLowerCase() === "animation")?.id ??
+      16;
 
-    discover(mediaType, {
-      genre: genreIds,
-      year: appliedFilters.year,
-      language: appliedFilters.language,
-      country: appliedFilters.country,
-      minRating: appliedFilters.rating,
-      page: 1,
-    })
-      .then((response) => {
+    Promise.all(
+      mediaTypes.map((mediaType) =>
+        discover(mediaType, {
+          genre:
+            selectedType === "anime"
+              ? animationGenreId
+              : buildGenreIds(selectedGenres, genres, mediaType),
+          year: appliedFilters.year,
+          language: appliedFilters.language,
+          country: appliedFilters.country,
+          minRating: appliedFilters.rating,
+          page: 1,
+        }),
+      ),
+    )
+      .then((responses) => {
         if (!current) return;
-        setCatalog(unwrapList(response));
-        setCatalogTotalPages(Number(response?.total_pages) || 1);
+        setCatalog(responses.flatMap(unwrapList));
+        setCatalogTotalPages(
+          Math.max(
+            ...responses.map((response) => Number(response?.total_pages) || 1),
+          ),
+        );
       })
       .catch((error) => {
         if (!current || suggestionsDismissedRef.current) return;
@@ -444,21 +460,42 @@ const SearchResult = () => {
 
     const nextPage = catalogPage + 1;
     setCatalogLoadingMore(true);
-    const mediaType = selectedType === "movie" ? "movie" : "tv";
-    const genreIds = buildGenreIds(selectedGenres, genres);
+    const mediaTypes =
+      selectedType === "anime"
+        ? ["movie", "tv"]
+        : [selectedType === "movie" ? "movie" : "tv"];
+    const animationGenreId =
+      genres.find((genre) => genre.name.toLowerCase() === "animation")?.id ??
+      16;
     try {
-      const response = await discover(mediaType, {
-        genre: genreIds,
-        year: appliedFilters.year,
-        language: appliedFilters.language,
-        country: appliedFilters.country,
-        minRating: appliedFilters.rating,
-        page: nextPage,
-      });
+      const responses = await Promise.all(
+        mediaTypes.map((mediaType) =>
+          discover(mediaType, {
+            genre:
+              selectedType === "anime"
+                ? animationGenreId
+                : buildGenreIds(selectedGenres, genres, mediaType),
+            year: appliedFilters.year,
+            language: appliedFilters.language,
+            country: appliedFilters.country,
+            minRating: appliedFilters.rating,
+            page: nextPage,
+          }),
+        ),
+      );
       if (pageRequestRef.current !== requestId) return;
-      setCatalog((current) => [...current, ...unwrapList(response)]);
+      setCatalog((current) => [
+        ...current,
+        ...responses.flatMap(unwrapList),
+      ]);
       setCatalogPage(nextPage);
-      setCatalogTotalPages(Number(response?.total_pages) || nextPage);
+      setCatalogTotalPages(
+        Math.max(
+          ...responses.map(
+            (response) => Number(response?.total_pages) || nextPage,
+          ),
+        ),
+      );
     } catch (error) {
       if (pageRequestRef.current === requestId) {
         setPaginationError(`Could not load more titles: ${errorMessage(error)}`);

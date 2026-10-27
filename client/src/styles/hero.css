@@ -25,8 +25,8 @@
 
 .hero-reel {
   position: relative;
-  height: min(78svh, 760px);
-  min-height: 520px;
+  height: min(68svh, 620px);
+  min-height: 460px;
   overflow: visible;
 }
 

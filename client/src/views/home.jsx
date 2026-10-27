@@ -36,8 +36,10 @@ const Home = () => {
   const onOpen = (path) => navigate(path);
   const onSave = (tmdbId, mediaType, authToken) =>
     addToWatchlist(tmdbId, mediaType, authToken);
-  const onGenreViewAll = (genre) =>
-    navigate("/filtered-movies", { state: { genre } });
+  const onGenreViewAll = (genre, browseType) => {
+    const type = browseType === "TV Show" ? "tv" : "movie";
+    navigate(`/search?type=${type}&genre=${encodeURIComponent(genre.name)}`);
+  };
 
   return (
     <div className="media-page-shell">

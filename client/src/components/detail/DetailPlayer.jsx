@@ -1,7 +1,6 @@
 import React from "react";
 
 const DetailPlayer = ({
-  playerRef,
   isTv,
   selectedSeason,
   selectedEpisode,
@@ -10,34 +9,38 @@ const DetailPlayer = ({
 }) => (
   <section
     className="detail-section detail-player-section"
-    ref={playerRef}
     aria-labelledby="watch-title"
   >
     <div className="detail-section-heading">
       <div>
-        <span className="detail-eyebrow">
-          {isTv && selectedEpisode !== null
-            ? `Season ${selectedSeason} · Episode ${selectedEpisode}`
-            : "Watch"}
-        </span>
-        <h2 id="watch-title">{isTv ? "Watch episode" : "Watch movie"}</h2>
+        {isTv && selectedEpisode !== null && (
+          <span className="detail-eyebrow">
+            Season {selectedSeason} · Episode {selectedEpisode}
+          </span>
+        )}
+        <h2 id="watch-title">Watch</h2>
       </div>
     </div>
     {playerSrc ? (
-      <div className="detail-player-frame">
-        <iframe
-          key={playerSrc}
-          src={playerSrc}
-          title={
-            isTv
-              ? `${title}, season ${selectedSeason}, episode ${selectedEpisode}`
-              : `${title} video player`
-          }
-          allowFullScreen
-          frameBorder="0"
-          allow="autoplay; fullscreen; picture-in-picture"
-        />
-      </div>
+      <>
+        <div className="detail-player-frame">
+          <iframe
+            key={playerSrc}
+            src={playerSrc}
+            title={
+              isTv
+                ? `${title}, season ${selectedSeason}, episode ${selectedEpisode}`
+                : `${title} video player`
+            }
+            allowFullScreen
+            frameBorder="0"
+            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+          />
+        </div>
+        <a className="detail-player-fallback" href={playerSrc}>
+          If playback is unavailable, open the player directly
+        </a>
+      </>
     ) : (
       <p className="detail-empty">
         {isTv

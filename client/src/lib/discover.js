@@ -6,7 +6,12 @@ export const errorMessage = (error) =>
 export const matchesType = (movie, type) => {
   const itemType = String(movie.type ?? "").trim().toLowerCase();
   if (type === "anime") {
-    return itemType === "anime" || hasAnimeGenre(movie.genre);
+    return (
+      itemType === "anime" ||
+      hasAnimeGenre(movie.genre) ||
+      (Array.isArray(movie.genre) &&
+        movie.genre.some((genre) => genre.toLowerCase() === "animation"))
+    );
   }
   if (type === "tv") {
     return isTvMediaType(itemType);
@@ -19,14 +24,27 @@ export const rawYear = (movie) => {
   return /^\d{4}/.test(year) ? year.slice(0, 4) : "";
 };
 
-export const buildGenreIds = (selectedGenres, genres) =>
+export const buildGenreIds = (selectedGenres, genres, mediaType = "movie") =>
   selectedGenres
-    .map(
-      (name) =>
-        genres.find(
-          (genre) => genre.name.toLowerCase() === name.toLowerCase(),
-        )?.id,
-    )
+    .map((name) => {
+      const genre = genres.find(
+        (entry) => entry.name.toLowerCase() === name.toLowerCase(),
+      );
+      const typeId = mediaType === "tv" ? genre?.tvId : genre?.movieId;
+      if (typeId != null) return typeId;
+
+      if (mediaType === "tv" && name.toLowerCase() === "action") {
+        return genres.find(
+          (entry) => entry.name.toLowerCase() === "action & adventure",
+        )?.tvId;
+      }
+
+      if (genre?.movieId !== undefined || genre?.tvId !== undefined) {
+        return undefined;
+      }
+
+      return genre?.id;
+    })
     .filter((id) => id !== undefined)
     .join("|");
 

@@ -14,7 +14,27 @@ const BrowseByGenreSection = ({ genres, representativeItems = [], onGenreViewAll
     () => genres.map(normalizeGenre).filter((genre) => genre !== null),
     [genres],
   );
-  const activeGenre = normalizedGenres.find((genre) => genre.id === activeGenreId) ?? normalizedGenres[0] ?? null;
+  const activeGenre =
+    normalizedGenres.find((genre) => genre.id === activeGenreId) ??
+    normalizedGenres[0] ??
+    null;
+  const activeBrowseGenreId = useMemo(() => {
+    if (!activeGenre) return null;
+    const typeId = browseType === "Movie" ? activeGenre.movieId : activeGenre.tvId;
+    if (typeId != null) return typeId;
+
+    if (browseType === "TV Show" && activeGenre.name.toLowerCase() === "action") {
+      return normalizedGenres.find(
+        (genre) => genre.name.toLowerCase() === "action & adventure",
+      )?.tvId ?? null;
+    }
+
+    if (activeGenre.movieId !== undefined || activeGenre.tvId !== undefined) {
+      return null;
+    }
+
+    return activeGenre.id;
+  }, [activeGenre, browseType, normalizedGenres]);
 
   const genreRepresentatives = useMemo(() => {
     const usedPosters = new Set();
@@ -35,7 +55,7 @@ const BrowseByGenreSection = ({ genres, representativeItems = [], onGenreViewAll
   }, [normalizedGenres, representativeItems]);
 
   const { items: genreResultsItems, loading: genreResultsLoading, error: genreResultsError, retry: retryGenreResults } =
-    useGenreFeed({ genreId: activeGenreId, mediaType: browseType });
+    useGenreFeed({ genreId: activeBrowseGenreId, mediaType: browseType });
 
   const genreTrackRef = useRef(null);
   const genreResultsTrackRef = useRef(null);
@@ -61,7 +81,7 @@ const BrowseByGenreSection = ({ genres, representativeItems = [], onGenreViewAll
 
   const openGenreResults = () => {
     if (activeGenre) {
-      onGenreViewAll(activeGenre);
+      onGenreViewAll(activeGenre, browseType);
     }
   };
 

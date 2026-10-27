@@ -38,11 +38,9 @@ export const formatGenre = (movie?: HeroMetadata | null): string => {
   return "Featured";
 };
 
-export const formatRuntime = (movie?: HeroMetadata | null): string => {
-  if (!movie) return "N/A";
-  if (movie.runtime) return `${movie.runtime} min`;
-  if (movie.duration) return `${movie.duration} min`;
-  return "N/A";
+export const formatRuntime = (movie?: HeroMetadata | null): string | null => {
+  const runtime = Number(movie?.runtime ?? movie?.duration);
+  return Number.isFinite(runtime) && runtime > 0 ? `${runtime} min` : null;
 };
 
 export const formatMetaLine = (movie?: HeroMetadata | null): string => {
