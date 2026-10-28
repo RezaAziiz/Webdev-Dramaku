@@ -3,9 +3,22 @@
 // shaping/caching can be added here later without touching controllers.
 const env = require('../config/env');
 const AppError = require('../utils/AppError');
+const cacheService = require('./cacheService');
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const VALID_MEDIA_TYPES = ['movie', 'tv'];
+
+// TTL (Time-To-Live) in seconds
+const TTL = {
+  GENRES: 86400, // 24 hours (data statis)
+  DETAILS: 43200, // 12 hours (detail film/cast)
+  TRENDING: 3600, // 1 hour
+  POPULAR: 3600, // 1 hour
+  JUST_ADDED: 1800, // 30 minutes
+  DISCOVER: 1800, // 30 minutes
+  SEARCH: 900, // 15 minutes
+  DEFAULT: 3600, // 1 hour
+};
 
 const assertValidMediaType = (mediaType) => {
   if (!VALID_MEDIA_TYPES.includes(mediaType)) {
@@ -23,25 +36,36 @@ const buildUrl = (path, params = {}) => {
   return url;
 };
 
-const tmdbRequest = async (path, params = {}) => {
-  const url = buildUrl(path, params);
+const tmdbRequest = async (path, params = {}, ttlSeconds = TTL.DEFAULT) => {
+  // Sort keys to produce deterministic cache key
+  const sortedParams = Object.keys(params)
+    .sort()
+    .reduce((acc, key) => {
+      acc[key] = params[key];
+      return acc;
+    }, {});
+  const cacheKey = `tmdb:${path}:${JSON.stringify(sortedParams)}`;
 
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${env.TMDB_READ_ACCESS_TOKEN}`,
-      Accept: 'application/json',
-    },
-  });
+  return await cacheService.getOrSet(cacheKey, ttlSeconds, async () => {
+    const url = buildUrl(path, params);
 
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new AppError('Title not found on TMDB', 404);
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${env.TMDB_READ_ACCESS_TOKEN}`,
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new AppError('Title not found on TMDB', 404);
+      }
+      const body = await response.text();
+      throw new AppError(`TMDB request failed (${response.status}): ${body}`, 502);
     }
-    const body = await response.text();
-    throw new AppError(`TMDB request failed (${response.status}): ${body}`, 502);
-  }
 
-  return response.json();
+    return response.json();
+  });
 };
 
 exports.getTrending = async (mediaType = 'all', timeWindow = 'day', page = 1) => {
@@ -49,24 +73,24 @@ exports.getTrending = async (mediaType = 'all', timeWindow = 'day', page = 1) =>
   if (!['day', 'week'].includes(timeWindow)) {
     throw new AppError("timeWindow must be 'day' or 'week'", 400);
   }
-  return await tmdbRequest(`/trending/${mediaType}/${timeWindow}`, { page });
+  return await tmdbRequest(`/trending/${mediaType}/${timeWindow}`, { page }, TTL.TRENDING);
 };
 
 exports.getPopular = async (mediaType, page = 1) => {
   assertValidMediaType(mediaType);
-  return await tmdbRequest(`/${mediaType}/popular`, { page });
+  return await tmdbRequest(`/${mediaType}/popular`, { page }, TTL.POPULAR);
 };
 
 // "Just added": most recently released/aired titles TMDB currently tracks.
 exports.getJustAdded = async (mediaType, page = 1) => {
   assertValidMediaType(mediaType);
   const path = mediaType === 'movie' ? '/movie/now_playing' : '/tv/on_the_air';
-  return await tmdbRequest(path, { page });
+  return await tmdbRequest(path, { page }, TTL.JUST_ADDED);
 };
 
 exports.getGenres = async (mediaType) => {
   assertValidMediaType(mediaType);
-  return await tmdbRequest(`/genre/${mediaType}/list`);
+  return await tmdbRequest(`/genre/${mediaType}/list`, {}, TTL.GENRES);
 };
 
 exports.discover = async (mediaType, { genre, year, sortBy, page, language, country, minRating } = {}) => {
@@ -83,25 +107,25 @@ exports.discover = async (mediaType, { genre, year, sortBy, page, language, coun
   };
   if (mediaType === 'movie' && year) params.primary_release_year = year;
   if (mediaType === 'tv' && year) params.first_air_date_year = year;
-  return await tmdbRequest(`/discover/${mediaType}`, params);
+  return await tmdbRequest(`/discover/${mediaType}`, params, TTL.DISCOVER);
 };
 
 exports.search = async (term, page = 1) => {
   if (!term || !term.trim()) {
     return { page: 1, results: [], total_pages: 0, total_results: 0 };
   }
-  return await tmdbRequest('/search/multi', { query: term.trim(), page, include_adult: false });
+  return await tmdbRequest('/search/multi', { query: term.trim(), page, include_adult: false }, TTL.SEARCH);
 };
 
 exports.getDetails = async (mediaType, tmdbId) => {
   assertValidMediaType(mediaType);
   return await tmdbRequest(`/${mediaType}/${tmdbId}`, {
     append_to_response: 'credits,videos,recommendations',
-  });
+  }, TTL.DETAILS);
 };
 
 exports.getSeasonDetails = async (tmdbId, seasonNumber) => {
-  return await tmdbRequest(`/tv/${tmdbId}/season/${seasonNumber}`);
+  return await tmdbRequest(`/tv/${tmdbId}/season/${seasonNumber}`, {}, TTL.DETAILS);
 };
 
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';

@@ -49,59 +49,68 @@ export const buildGenreIds = (selectedGenres, genres, mediaType = "movie") =>
     .join("|");
 
 export const FALLBACK_LANGUAGES = [
-  "English",
-  "Indonesian",
-  "Japanese",
-  "Korean",
-  "Mandarin",
+  "Arabic",
   "Cantonese",
-  "Thai",
+  "English",
   "Filipino",
-  "Spanish",
   "French",
   "German",
   "Hindi",
+  "Indonesian",
+  "Italian",
+  "Japanese",
+  "Korean",
+  "Malay",
+  "Mandarin",
   "Portuguese",
+  "Russian",
+  "Spanish",
+  "Thai",
   "Turkish",
 ];
 
 export const FALLBACK_COUNTRIES = [
-  "Indonesia",
-  "Japan",
-  "South Korea",
-  "United States of America",
-  "United Kingdom",
+  "Australia",
+  "Canada",
   "China",
-  "Hong Kong",
-  "Taiwan",
-  "Thailand",
-  "India",
-  "Malaysia",
-  "Singapore",
-  "Philippines",
-  "Spain",
   "France",
   "Germany",
-  "Canada",
-  "Australia",
+  "Hong Kong",
+  "India",
+  "Indonesia",
+  "Italy",
+  "Japan",
+  "Malaysia",
+  "Philippines",
+  "Russia",
+  "Singapore",
+  "South Korea",
+  "Spain",
+  "Taiwan",
+  "Thailand",
+  "United Kingdom",
+  "United States of America",
 ];
 
 const mergeLabelOptions = (labels, fallbackLabels) => {
-  const values = new Set(labels.filter(Boolean));
-  if (!values.size) fallbackLabels.forEach((label) => values.add(label));
+  const values = new Set([...fallbackLabels, ...(labels || []).filter(Boolean)]);
   return [...values].sort((a, b) => a.localeCompare(b));
 };
 
-export const getFilterOptions = (catalog) => {
-  const years = new Set();
+export const getFilterOptions = (catalog = []) => {
+  const currentYear = new Date().getFullYear();
+  // Generate list of years from currentYear down to 1970 (e.g. 2026 down to 1970)
+  const defaultYears = Array.from({ length: currentYear - 1969 }, (_, i) => String(currentYear - i));
+  const years = new Set(defaultYears);
   const languages = new Set();
   const countries = new Set();
 
-  catalog.forEach((movie) => {
+  (catalog || []).forEach((movie) => {
+    if (!movie) return;
     const year = rawYear(movie);
     if (year) years.add(year);
     if (movie.language) languages.add(movie.language);
-    movie.countries.forEach((country) => countries.add(country));
+    (movie.countries || []).forEach((country) => countries.add(country));
   });
 
   return {

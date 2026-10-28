@@ -815,23 +815,6 @@
   justify-self: start;
 }
 
-.ui-select {
-  position: relative;
-  z-index: 99999 !important;
-}
-
-.ui-select-menu {
-  position: absolute;
-  z-index: 100000 !important;
-  background: var(--glass-fallback) !important;
-  color: var(--text-primary) !important;
-  border: 1px solid var(--glass-border) !important;
-  box-shadow: var(--shadow-popover) !important;
-  border-radius: 18px !important;
-  overflow: hidden !important;
-  backdrop-filter: blur(28px) saturate(145%) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(145%) !important;
-}
 
 @keyframes detail-art-reveal {
   from {

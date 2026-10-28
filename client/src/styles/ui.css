@@ -75,17 +75,35 @@
   top: calc(100% + 8px);
   right: 0;
   left: 0;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   max-height: min(46vh, 320px);
   gap: 4px;
   padding: 8px;
-  overflow-y: auto;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--white-18) transparent;
   border: 1px solid var(--glass-border);
   border-radius: 18px;
   background: var(--glass-fallback);
   box-shadow: var(--shadow-popover);
   -webkit-backdrop-filter: blur(28px) saturate(145%);
   backdrop-filter: blur(28px) saturate(145%);
+}
+
+.ui-select-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ui-select-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ui-select-menu::-webkit-scrollbar-thumb {
+  background: var(--white-18);
+  border-radius: 6px;
 }
 
 .ui-select.is-dropup .ui-select-menu {

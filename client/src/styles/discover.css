@@ -436,17 +436,25 @@
   gap: 12px;
 }
 
-.discover-page > .discover-filter-controls:has(.ui-select.is-open) {
-  z-index: 3;
+.discover-page > .discover-filter-controls:has(.ui-select.is-open),
+.discover-filter-controls:has(.ui-select.is-open) {
+  position: relative;
+  z-index: 130;
 }
 
 .discover-filter-fields .discover-filter-field {
+  position: relative;
   display: grid;
   min-width: 0;
   gap: 6px;
   color: var(--text-secondary);
   font-size: 0.7rem;
   font-weight: 800;
+}
+
+.discover-filter-fields .discover-filter-field:has(.ui-select.is-open),
+.discover-filter-fields .discover-filter-field:focus-within {
+  z-index: 135;
 }
 
 .discover-filter-fields .ui-select:disabled {

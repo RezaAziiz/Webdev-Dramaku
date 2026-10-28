@@ -15,6 +15,7 @@ const SelectMenu = ({
   const rootRef = useRef(null);
   const triggerRef = useRef(null);
   const listRef = useRef(null);
+  const isKeyboardNavRef = useRef(false);
   const listId = useRef(
     `ui-select-${Math.random().toString(36).slice(2, 9)}`,
   ).current;
@@ -51,7 +52,7 @@ const SelectMenu = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen || activeIndex < 0) return undefined;
+    if (!isOpen || activeIndex < 0 || !isKeyboardNavRef.current) return undefined;
     const frame = requestAnimationFrame(() => {
       listRef.current
         ?.querySelectorAll('[role="option"]')
@@ -103,6 +104,7 @@ const SelectMenu = ({
     }
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
+      isKeyboardNavRef.current = true;
       setActiveIndex((prev) => {
         const total = options.length;
         if (!total) return -1;
@@ -113,11 +115,13 @@ const SelectMenu = ({
     }
     if (event.key === "Home") {
       event.preventDefault();
+      isKeyboardNavRef.current = true;
       setActiveIndex(options.length ? 0 : -1);
       return;
     }
     if (event.key === "End") {
       event.preventDefault();
+      isKeyboardNavRef.current = true;
       setActiveIndex(options.length - 1);
       return;
     }
@@ -174,7 +178,10 @@ const SelectMenu = ({
                 role="option"
                 aria-selected={Boolean(isSelected)}
                 tabIndex={-1}
-                onMouseEnter={() => setActiveIndex(index)}
+                onMouseEnter={() => {
+                  isKeyboardNavRef.current = false;
+                  setActiveIndex(index);
+                }}
                 onClick={() => chooseOption(option)}
               >
                 <span>{option.label}</span>
