@@ -1,7 +1,7 @@
 const catchAsync = require('../utils/catchAsync');
 const userService = require('../services/userService');
+const s3Service = require('../services/s3Service');
 const AppError = require('../utils/AppError');
-const cloudinary = require('../config/cloudinary');
 
 exports.getAllUsers = catchAsync(async (req, res, next) => {
   const users = await userService.getAllUsers();
@@ -21,19 +21,32 @@ exports.updateRole = catchAsync(async (req, res, next) => {
   res.status(200).json(result);
 });
 
+exports.getPresignedUploadUrl = catchAsync(async (req, res, next) => {
+  const { mimeType, size, folder = 'avatars' } = req.body;
+  if (!mimeType || !size) {
+    return next(new AppError('mimeType and size are required', 400));
+  }
+  const result = await s3Service.createPresignedUploadUrl({ folder, mimeType, size });
+  res.status(200).json(result);
+});
+
 exports.updateAvatar = catchAsync(async (req, res, next) => {
-  if (!req.file) {
-    return next(new AppError('Photo is required', 400));
+  let avatarUrl = req.body?.avatar_url;
+
+  if (req.file) {
+    const uploadResult = await s3Service.uploadBuffer({
+      buffer: req.file.buffer,
+      mimeType: req.file.mimetype,
+      folder: 'avatars',
+    });
+    avatarUrl = uploadResult.publicUrl;
   }
 
-  const avatarUrl = await new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream({ folder: 'avatars' }, (error, result) => {
-      if (error) return reject(error);
-      resolve(result.secure_url);
-    });
-    uploadStream.end(req.file.buffer);
-  });
+  if (!avatarUrl) {
+    return next(new AppError('Photo file or avatar_url is required', 400));
+  }
 
   const result = await userService.updateAvatar(req.user.username, avatarUrl);
   res.status(200).json(result);
 });
+

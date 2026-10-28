@@ -975,16 +975,16 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-.detail-facts {
-  position: relative;
-  z-index: 10;
-  padding: 8px;
-  background: var(--glass-bg);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-nav);
-}
+  .detail-facts {
+    position: relative;
+    z-index: 10;
+    padding: 8px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-nav);
+  }
 
   .detail-episode-list {
     gap: 18px;

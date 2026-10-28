@@ -5,7 +5,6 @@ const cors = require('cors');
 
 // Config imports
 const pool = require('./config/db');
-const cloudinary = require('./config/cloudinary');
 
 // Route imports
 const authRoutes = require('./routes/authRoutes');
@@ -30,6 +29,11 @@ app.use('/', authRoutes);
 
 // User Routes
 app.use('/api/users', userRoutes);
+
+// Direct S3 pre-signed upload URL endpoint (matches frontend AWS_CONFIG.UPLOAD_ENDPOINT)
+const { authenticateToken } = require('./middlewares/authMiddleware');
+const userController = require('./controllers/userController');
+app.post('/api/upload-url', authenticateToken, userController.getPresignedUploadUrl);
 
 // TMDB Proxy Routes (titles, search, genres, discover - all live from TMDB)
 app.use('/', tmdbRoutes);

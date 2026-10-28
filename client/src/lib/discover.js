@@ -126,47 +126,31 @@ export const filterAndSortMedia = ({
   term,
 }) => {
   const result = source.filter((movie) => {
+    if (!movie) return false;
+
     if (
       (selectedType === "anime" || term || selectedSort === "trending") &&
       !matchesType(movie, selectedType)
     ) {
       return false;
     }
+    
+    // When using the Discover API with filters, we trust the API response.
+    // We only apply local filters for attributes that are NOT sent to the API.
+    // Since we ARE sending year, language, country, and rating to the API in SearchResult.jsx,
+    // we can skip local filtering for these to prevent format mismatch errors.
+
     if (
       selectedGenres.length > 0 &&
-      !selectedGenres.some((selectedGenre) =>
+      (!movie.genre || !selectedGenres.some((selectedGenre) =>
         movie.genre.some(
-          (genre) => genre.toLowerCase() === selectedGenre.toLowerCase(),
+          (genre) => genre?.toLowerCase() === selectedGenre.toLowerCase(),
         ),
-      )
+      ))
     ) {
       return false;
     }
-    if (appliedFilters.year && rawYear(movie) !== appliedFilters.year) {
-      return false;
-    }
-    if (
-      appliedFilters.language &&
-      movie.language?.toLowerCase() !== appliedFilters.language.toLowerCase()
-    ) {
-      return false;
-    }
-    if (
-      appliedFilters.country &&
-      !movie.countries.some(
-        (country) =>
-          country.toLowerCase() === appliedFilters.country.toLowerCase(),
-      )
-    ) {
-      return false;
-    }
-    if (
-      appliedFilters.rating &&
-      (movie.rating === null ||
-        Number(movie.rating) < Number(appliedFilters.rating))
-    ) {
-      return false;
-    }
+    
     return true;
   });
 

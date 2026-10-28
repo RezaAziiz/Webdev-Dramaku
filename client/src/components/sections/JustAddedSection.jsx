@@ -2,9 +2,11 @@ import React, { useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { buildMediaDetailPath } from "../../lib/media";
 import { useJustAddedFeed } from "../../hooks/useJustAddedFeed";
+import { LuGrid, LuFilm, LuTv } from "react-icons/lu";
 
 const JustAddedSection = ({ mediaFilter, setMediaFilter }) => {
   const navigate = useNavigate();
+
   const { items: justAddedItems, loading: justAddedLoading, error: justAddedError, retry: retryJustAdded } =
     useJustAddedFeed();
   const justAddedRef = useRef(null);
@@ -55,19 +57,27 @@ const JustAddedSection = ({ mediaFilter, setMediaFilter }) => {
         </div>
         <div className="just-added-header-actions">
           <div className="filter-row" role="group" aria-label="Filter new titles">
-            {["All", "Movie", "Series"].map((filter) => (
-              <button
-                type="button"
-                key={filter}
-                className={`filter-pill${
-                  mediaFilter === filter ? " is-active" : ""
-                }`}
-                aria-pressed={mediaFilter === filter}
-                onClick={() => setMediaFilter(filter)}
-              >
-                {filter === "Movie" ? "Movies" : filter === "Series" ? "Series" : "All"}
-              </button>
-            ))}
+              {["All", "Movie", "Series"].map((filter) => (
+                <button
+                  type="button"
+                  key={filter}
+                  className={`filter-pill${
+                    mediaFilter === filter ? " is-active" : ""
+                  }`}
+                  aria-pressed={mediaFilter === filter}
+                  onClick={() => setMediaFilter(filter)}
+                >
+                  <div className="filter-pill-content">
+                    {filter === "All" && <LuGrid aria-hidden="true" />}
+                    {filter === "Movie" && <LuFilm aria-hidden="true" />}
+                    {filter === "Series" && <LuTv aria-hidden="true" />}
+                    <span>
+                      {filter === "Movie" ? "Movies" : filter === "Series" ? "Series" : "All"}
+                    </span>
+                  </div>
+                </button>
+              ))}
+
           </div>
           {filteredJustAdded.length > 1 && (
             <div className="trending-controls just-added-controls" aria-label="Just Added carousel controls">

@@ -52,8 +52,8 @@ exports.getMergedGenres = catchAsync(async (req, res) => {
 
 exports.discover = catchAsync(async (req, res) => {
   const { mediaType } = req.params;
-  const { genre, year, sortBy, page, language, minRating } = req.query;
-  const data = await tmdbService.discover(mediaType, { genre, year, sortBy, page, language, minRating });
+  const { genre, year, sortBy, page, language, country, minRating } = req.query;
+  const data = await tmdbService.discover(mediaType, { genre, year, sortBy, page, language, country, minRating });
   res.json(data);
 });
 
@@ -61,8 +61,8 @@ exports.discover = catchAsync(async (req, res) => {
 // { id, title, images, description, year, rating, type, genre }.
 exports.discoverContract = catchAsync(async (req, res) => {
   const { mediaType } = req.params;
-  const { genre, year, sortBy, page, language, minRating } = req.query;
-  const data = await tmdbService.discoverNormalized(mediaType, { genre, year, sortBy, page, language, minRating });
+  const { genre, year, sortBy, page, language, country, minRating } = req.query;
+  const data = await tmdbService.discoverNormalized(mediaType, { genre, year, sortBy, page, language, country, minRating });
   res.json(data);
 });
 

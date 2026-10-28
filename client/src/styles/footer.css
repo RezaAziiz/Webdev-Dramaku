@@ -32,11 +32,18 @@
 
 .site-footer-links a {
   display: flex;
-  min-height: 44px;
   align-items: center;
+  gap: 8px;
+  min-height: 44px;
   color: var(--text-secondary);
   font-size: 0.8rem;
   font-weight: 700;
+}
+
+.site-footer-links a svg {
+  flex: 0 0 auto;
+  font-size: 1rem;
+  color: var(--text-muted);
 }
 
 .site-footer-bottom {

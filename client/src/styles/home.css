@@ -435,8 +435,8 @@
 
 .filter-pill {
   display: inline-flex;
-  min-height: 44px;
   align-items: center;
+  justify-content: center;
   padding: 0 12px;
   border: 1px solid var(--white-12);
   border-radius: var(--radius-pill);
@@ -450,10 +450,22 @@
   cursor: pointer;
 }
 
+.filter-pill-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .filter-pill.is-active {
   border-color: transparent;
   background: var(--accent-soft);
   color: var(--text-primary);
+}
+
+.browse-type-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .just-added-header-actions {
@@ -472,9 +484,9 @@
   display: flex;
   gap: 12px;
   overflow-x: auto;
-  padding: 12px 7% 16px;
+  padding: 12px 2% 16px;
   scroll-snap-type: x mandatory;
-  scroll-padding-inline: 7%;
+  scroll-padding-inline: 2%;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   touch-action: pan-x;
@@ -491,7 +503,7 @@
 .just-added-card {
   position: relative;
   display: block;
-  flex: 0 0 86%;
+  flex: 0 0 clamp(260px, 72vw, 440px);
   min-width: 0;
   aspect-ratio: 16 / 9;
   padding: 0;

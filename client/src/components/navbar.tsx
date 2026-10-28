@@ -260,24 +260,23 @@ export default function Navbar() {
               </button>
               {profileOpen && (
                 <div className="profile-popover">
-                  <Link
-                    to={libraryTo}
-                    onClick={() => setProfileOpen(false)}
-                  >
-                    Your library
-                  </Link>
-                  {(role === USER_ROLES.ADMIN || role === USER_ROLES.WRITER) && (
-                    <Link
-                      to="/dramaInput"
-                      onClick={() => setProfileOpen(false)}
-                    >
-                      Content management
-                    </Link>
-                  )}
-                  <button type="button" onClick={signOut}>
-                    <LuLogOut aria-hidden="true" />
-                    Sign out
-                  </button>
+                   <Link
+                     to={`/profile/${encodeURIComponent(safeUsername)}`}
+                     onClick={() => setProfileOpen(false)}
+                   >
+                     My Profile
+                   </Link>
+                   <Link
+                     to={libraryTo}
+                     onClick={() => setProfileOpen(false)}
+                   >
+                     Your library
+                   </Link>
+                   <button type="button" onClick={signOut}>
+                     <LuLogOut aria-hidden="true" />
+                     Sign out
+                   </button>
+
                 </div>
               )}
             </div>
@@ -404,20 +403,23 @@ export default function Navbar() {
               </button>
               {profileOpen && (
                 <div className="profile-popover">
-                  {role === USER_ROLES.ADMIN && (
-                    <Link to="/dramaInput" onClick={() => setProfileOpen(false)}>
-                      Content management
-                    </Link>
-                  )}
-                  {role === USER_ROLES.WRITER && (
-                    <Link to="/dramaInput" onClick={() => setProfileOpen(false)}>
-                      Content editor
-                    </Link>
-                  )}
-                  <button type="button" onClick={signOut}>
-                    <LuLogOut aria-hidden="true" />
-                    Sign out
-                  </button>
+                   <Link
+                     to={`/profile/${encodeURIComponent(safeUsername)}`}
+                     onClick={() => setProfileOpen(false)}
+                   >
+                     My Profile
+                   </Link>
+                   <Link
+                     to={libraryTo}
+                     onClick={() => setProfileOpen(false)}
+                   >
+                     Your library
+                   </Link>
+                   <button type="button" onClick={signOut}>
+                     <LuLogOut aria-hidden="true" />
+                     Sign out
+                   </button>
+
                 </div>
               )}
             </div>

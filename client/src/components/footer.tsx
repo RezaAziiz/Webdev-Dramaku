@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import logo from "../assets/Logo.png";
+import { LuFilm, LuTv, LuCompass, LuHome, LuLibrary, LuLogIn } from "react-icons/lu";
 
 const Footer = () => (
   <footer className="site-footer">
@@ -12,12 +13,12 @@ const Footer = () => (
       </p>
     </div>
     <nav className="site-footer-links" aria-label="Footer navigation">
-      <Link to="/">Home</Link>
-      <Link to="/search?type=movie">Movies</Link>
-      <Link to="/search?type=tv">TV Shows</Link>
-      <Link to="/#anime-title">Anime</Link>
-      <Link to="/search">Discover</Link>
-      <Link to="/login">Sign in</Link>
+      <Link to="/"><LuHome /> Home</Link>
+      <Link to="/search?type=movie"><LuFilm /> Movies</Link>
+      <Link to="/search?type=tv"><LuTv /> TV Shows</Link>
+      <Link to="/#anime-title"><LuFilm /> Anime</Link>
+      <Link to="/search"><LuCompass /> Discover</Link>
+      <Link to="/login"><LuLogIn /> Sign in</Link>
     </nav>
     <div className="site-footer-bottom">
       <p>

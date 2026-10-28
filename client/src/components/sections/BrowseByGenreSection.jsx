@@ -4,9 +4,11 @@ import { buildMediaDetailPath } from "../../lib/media";
 import { useGenreFeed } from "../../hooks/useGenreFeed";
 import { normalizeGenre } from "../../adapters/mediaAdapter";
 import { getMetaLine } from "../../lib/format";
+import { LuFilm, LuTv, LuCompass } from "react-icons/lu";
 
 const BrowseByGenreSection = ({ genres, representativeItems = [], onGenreViewAll }) => {
   const navigate = useNavigate();
+
   const [activeGenreId, setActiveGenreId] = useState(null);
   const [browseType, setBrowseType] = useState("Movie");
 
@@ -105,17 +107,22 @@ const BrowseByGenreSection = ({ genres, representativeItems = [], onGenreViewAll
         </div>
         <div className="browse-controls">
           <div className="browse-type-toggle" role="group" aria-label="Choose media type">
-            {["Movie", "TV Show"].map((type) => (
-              <button
-                type="button"
-                key={type}
-                className={browseType === type ? "is-active" : ""}
-                aria-pressed={browseType === type}
-                onClick={() => setBrowseType(type)}
-              >
-                {type === "Movie" ? "Movies" : "TV Shows"}
-              </button>
-            ))}
+              {["Movie", "TV Show"].map((type) => (
+                <button
+                  type="button"
+                  key={type}
+                  className={browseType === type ? "is-active" : ""}
+                  aria-pressed={browseType === type}
+                  onClick={() => setBrowseType(type)}
+                >
+                  <div className="browse-type-content">
+                    {type === "Movie" && <LuFilm aria-hidden="true" />}
+                    {type === "TV Show" && <LuTv aria-hidden="true" />}
+                    <span>{type === "Movie" ? "Movies" : "TV Shows"}</span>
+                  </div>
+                </button>
+              ))}
+
           </div>
           {activeGenre && (
             <button
@@ -123,8 +130,10 @@ const BrowseByGenreSection = ({ genres, representativeItems = [], onGenreViewAll
               className="browse-genre-link"
               onClick={openGenreResults}
             >
+              <LuCompass aria-hidden="true" />
               Browse {activeGenre.name} <span aria-hidden="true">↗</span>
             </button>
+
           )}
         </div>
       </div>

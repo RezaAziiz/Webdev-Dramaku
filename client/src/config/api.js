@@ -24,7 +24,6 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = trimTrailingSlashes(getApiBaseUrl());
 
-export const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID ||
-    '193966095713-ooq3r03aaanmf67tudroa67ccctfqvk6.apps.googleusercontent.com';
+export const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 
 export const apiUrl = (path) => `${API_BASE_URL}/${path.replace(/^\/+/, '')}`;

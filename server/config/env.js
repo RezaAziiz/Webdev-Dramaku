@@ -16,4 +16,9 @@ module.exports = {
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '1h',
   GOOGLE_CLIENT_ID: requireEnv('GOOGLE_CLIENT_ID'),
   TMDB_READ_ACCESS_TOKEN: requireEnv('TMDB_READ_ACCESS_TOKEN'),
+  // AWS S3 — required only when using S3 upload features.
+  AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || '',
+  AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || '',
+  AWS_REGION: process.env.AWS_REGION || 'ap-southeast-1',
+  AWS_S3_BUCKET: process.env.AWS_S3_BUCKET || '',
 };

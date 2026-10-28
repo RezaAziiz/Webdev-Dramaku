@@ -69,13 +69,16 @@ exports.getGenres = async (mediaType) => {
   return await tmdbRequest(`/genre/${mediaType}/list`);
 };
 
-exports.discover = async (mediaType, { genre, year, sortBy, page, language, minRating } = {}) => {
+exports.discover = async (mediaType, { genre, year, sortBy, page, language, country, minRating } = {}) => {
   assertValidMediaType(mediaType);
+  // The client sends human-readable labels ("Korean", "South Korea").
+  // TMDB needs ISO codes ("ko", "KR"). Convert before building the request.
   const params = {
     with_genres: genre,
     sort_by: sortBy || 'popularity.desc',
     page,
-    with_original_language: language,
+    with_original_language: toLangCode(language),
+    with_origin_country: toCountryCode(country),
     'vote_average.gte': minRating,
   };
   if (mediaType === 'movie' && year) params.primary_release_year = year;
@@ -151,6 +154,11 @@ const LANGUAGE_LABELS = {
   zh: 'Mandarin',
 };
 
+// Reverse map: label -> ISO code (for converting client filter values back to API codes)
+const LANGUAGE_CODE_BY_LABEL = Object.fromEntries(
+  Object.entries(LANGUAGE_LABELS).map(([code, label]) => [label.toLowerCase(), code])
+);
+
 const COUNTRY_LABELS = {
   AU: 'Australia',
   CA: 'Canada',
@@ -171,6 +179,24 @@ const COUNTRY_LABELS = {
   TH: 'Thailand',
   TW: 'Taiwan',
   US: 'United States of America',
+};
+
+// Reverse map: label -> ISO code
+const COUNTRY_CODE_BY_LABEL = Object.fromEntries(
+  Object.entries(COUNTRY_LABELS).map(([code, label]) => [label.toLowerCase(), code])
+);
+
+// Convert a human-readable language label to its ISO 639-1 code.
+// Returns the original value if it's already a code or unknown.
+const toLangCode = (value) => {
+  if (!value) return value;
+  return LANGUAGE_CODE_BY_LABEL[value.toLowerCase()] ?? value;
+};
+
+// Convert a human-readable country label to its ISO 3166-1 alpha-2 code.
+const toCountryCode = (value) => {
+  if (!value) return value;
+  return COUNTRY_CODE_BY_LABEL[value.toLowerCase()] ?? value;
 };
 
 const resolveLanguageName = (code) =>

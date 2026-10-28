@@ -1,0 +1,14 @@
+// AWS S3 client — credentials are read from environment variables only.
+// Never expose AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY to the frontend.
+const { S3Client } = require('@aws-sdk/client-s3');
+const env = require('./env');
+
+const s3 = new S3Client({
+  region: env.AWS_REGION,
+  credentials: {
+    accessKeyId: env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+  },
+});
+
+module.exports = s3;

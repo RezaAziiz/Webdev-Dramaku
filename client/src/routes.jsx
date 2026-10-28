@@ -10,8 +10,10 @@ import Users from "./views/cmsUsers";
 import FilteredMovies from "./views/filteredMovies";
 import NotFound from "./views/NotFound";
 import Watchlist from "./views/watchlist";
+import UserProfile from "./views/userProfile";
 import Watch from "./views/watch";
 import ProtectedRoute from "./protectedRoutes/ProtectedRoute";
+
 import { USER_ROLES } from "./constants/auth";
 
 const AppRoutes = () => {
@@ -23,7 +25,8 @@ const AppRoutes = () => {
         <Route path="movies/:mediaType/:id" element={<Detail />} />
         <Route path="watch/:mediaType/:id" element={<Watch />} />
         <Route path="filtered-movies" element={<FilteredMovies />} />
-        <Route path="watchlist/:username" element={<Watchlist />} />
+        <Route path="watchlist/:username" element={<UserProfile />} />
+        <Route path="profile/:username" element={<UserProfile />} />
       </Route>
       <Route path="login" element={<Login />} />
       <Route path="register" element={<Register />} />
