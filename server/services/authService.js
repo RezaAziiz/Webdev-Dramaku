@@ -10,7 +10,7 @@ const env = require('../config/env');
 const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
 exports.login = async (username, password) => {
-  const user = await userRepository.findByUsername(username);
+  const user = await userRepository.findByUsernameOrEmail(username);
 
   if (!user) {
     throw new AppError("User not found", 404);

@@ -5,6 +5,14 @@ exports.findByUsername = async (username) => {
   return result.rows[0];
 };
 
+exports.findByUsernameOrEmail = async (identifier) => {
+  const result = await pool.query(
+    "SELECT * FROM users WHERE LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($1) LIMIT 1",
+    [identifier]
+  );
+  return result.rows[0];
+};
+
 exports.findByGoogleId = async (googleId) => {
   const result = await pool.query("SELECT * FROM users WHERE google_id = $1", [googleId]);
   return result.rows[0];
