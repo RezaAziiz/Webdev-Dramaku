@@ -13,8 +13,13 @@ const JustAddedSection = ({ mediaFilter, setMediaFilter }) => {
 
   const filteredJustAdded = useMemo(() => {
     if (mediaFilter === "All") return justAddedItems;
+    // Filter pills use display labels ("Movie"/"Series"), while the data
+    // carries TMDB media types ("movie"/"tv").
+    const mediaType =
+      mediaFilter === "Series" ? "tv" : mediaFilter === "Movie" ? "movie" : null;
+    if (!mediaType) return justAddedItems;
     return justAddedItems.filter(
-      (movie) => movie.type?.toLowerCase() === mediaFilter.toLowerCase(),
+      (movie) => movie.type?.toLowerCase() === mediaType,
     );
   }, [justAddedItems, mediaFilter]);
 
@@ -135,7 +140,9 @@ const JustAddedSection = ({ mediaFilter, setMediaFilter }) => {
               <span className="trending-card-overlay" aria-hidden="true" />
               <span className="just-added-content">
                 {movie.type && (
-                  <span className="trend-type-pill">{movie.type}</span>
+                  <span className="trend-type-pill">
+                    {movie.type?.toLowerCase() === "tv" ? "Series" : "Movie"}
+                  </span>
                 )}
                 <span className="just-added-title">{movie.title}</span>
                 {(movie.year || movie.rating != null) && (

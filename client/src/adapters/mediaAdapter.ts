@@ -129,8 +129,16 @@ export const normalizeMovie = (movie: RawMedia): MediaItem => {
   };
 };
 
-export const normalizeContinueWatching = (movie: RawMedia): MediaItem =>
-  normalizeMovie(movie);
+export const normalizeContinueWatching = (movie: RawMedia): MediaItem => {
+  const item = normalizeMovie(movie);
+  const seasonNumber = asNumber(movie.season);
+  const episodeNumber = asNumber(movie.episode);
+  const episodeLabel =
+    seasonNumber != null && episodeNumber != null
+      ? `Season ${seasonNumber} · Episode ${episodeNumber}`
+      : item.episode;
+  return { ...item, episode: episodeLabel };
+};
 
 export const normalizeGenre = (genre: RawMedia): GenreItem | null => {
   const id = asIdentifier(genre.id) ?? asIdentifier(genre._id);

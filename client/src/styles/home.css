@@ -66,11 +66,12 @@
   display: flex;
   gap: 12px;
   overflow-x: auto;
-  padding: 12px 11% 16px;
+  padding: 12px 6% 16px;
   scroll-snap-type: x mandatory;
-  scroll-padding-inline: 11%;
+  scroll-padding-inline: 6%;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
+  touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -81,7 +82,7 @@
 .trending-card {
   position: relative;
   display: block;
-  flex: 0 0 min(88%, 680px);
+  flex: 0 0 min(66%, 400px);
   min-width: 0;
   aspect-ratio: 16 / 9;
   padding: 0;
@@ -90,6 +91,7 @@
   background: var(--white-04);
   overflow: hidden;
   scroll-snap-align: center;
+  touch-action: auto;
   transition:
     transform 240ms var(--ease-standard),
     opacity 240ms var(--ease-standard),
@@ -346,13 +348,15 @@
 .continue-row {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 78%;
+  grid-auto-columns: clamp(220px, 62vw, 380px);
   gap: 12px;
   overflow-x: auto;
-  padding-bottom: 4px;
+  padding: 4px 2% 16px;
   scrollbar-width: none;
   scroll-snap-type: x mandatory;
+  scroll-padding-inline: 2%;
   overscroll-behavior-x: contain;
+  touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -361,9 +365,10 @@
 }
 
 .continue-card {
-  display: grid;
-  gap: 12px;
+  position: relative;
+  display: block;
   min-width: 0;
+  aspect-ratio: 16 / 9;
   padding: 0;
   border: 1px solid var(--white-10);
   border-radius: 20px;
@@ -371,7 +376,8 @@
   overflow: hidden;
   text-align: left;
   cursor: pointer;
-  scroll-snap-align: start;
+  scroll-snap-align: center;
+  touch-action: auto;
   transition:
     transform 220ms var(--ease-standard),
     box-shadow 220ms var(--ease-standard),
@@ -379,30 +385,53 @@
 }
 
 .continue-card img {
-  display: block;
+  position: absolute;
+  inset: 0;
   width: 100%;
-  aspect-ratio: 2 / 3;
+  height: 100%;
   object-fit: cover;
+  object-position: top;
+}
+
+.continue-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    var(--overlay-image-dark) 0%,
+    transparent 36%,
+    var(--overlay-image-deep) 100%
+  );
 }
 
 .continue-card-body {
+  position: absolute;
+  z-index: 1;
+  inset: auto 0 0;
   display: grid;
-  gap: 10px;
-  padding: 0 12px 12px;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  background: linear-gradient(180deg, transparent, var(--overlay-image-deep));
 }
 
 .continue-card-head {
   display: grid;
   gap: 4px;
+  min-width: 0;
 }
 
 .continue-card-head strong {
+  overflow: hidden;
   color: var(--text-primary);
   font-size: 1rem;
   letter-spacing: -0.04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .continue-card-head span {
+  width: fit-content;
   color: var(--text-secondary);
   font-size: 0.68rem;
   font-weight: 700;
@@ -503,7 +532,7 @@
 .just-added-card {
   position: relative;
   display: block;
-  flex: 0 0 clamp(260px, 72vw, 440px);
+  flex: 0 0 clamp(230px, 62vw, 400px);
   min-width: 0;
   aspect-ratio: 16 / 9;
   padding: 0;
@@ -683,6 +712,7 @@
   scrollbar-width: none;
   scroll-snap-type: x mandatory;
   overscroll-behavior-x: contain;
+  touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
   -webkit-mask-image: linear-gradient(
     90deg,
@@ -707,7 +737,7 @@
 }
 
 .anime-row {
-  grid-auto-columns: 42%;
+  grid-auto-columns: clamp(125px, 34vw, 180px);
 }
 
 .anime-card {
@@ -723,6 +753,7 @@
   color: var(--text-primary);
   text-align: left;
   scroll-snap-align: start;
+  touch-action: auto;
   cursor: pointer;
 }
 
@@ -943,7 +974,7 @@
 .genre-results-track {
   width: 0;
   flex: 1 1 0%;
-  grid-auto-columns: minmax(min(82vw, 360px), 440px);
+  grid-auto-columns: minmax(min(66vw, 330px), 400px);
   align-items: stretch;
 }
 

@@ -3,9 +3,9 @@
   z-index: 0;
   display: grid;
   gap: 12px;
-  width: 100vw;
+  width: auto;
   max-width: none;
-  margin: calc(-1 * (var(--nav-height) + 8px)) calc(50% - 50vw) 24px;
+  margin: calc(-1 * (var(--nav-height) + 8px)) calc(-1 * var(--page-gutter)) 24px;
 }
 
 .hero-palette-backdrop {

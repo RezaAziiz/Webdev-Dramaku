@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { buildMediaDetailPath } from "../../lib/media";
 import { useContinueWatchingFeed } from "../../hooks/useContinueWatchingFeed";
@@ -12,10 +12,22 @@ const ContinueWatchingSection = ({ token }) => {
   const navigate = useNavigate();
   const { items: continueWatchingItems, loading: continueWatchingLoading, error: continueWatchingError, retry: retryContinueWatching } =
     useContinueWatchingFeed(token);
+  const continueWatchingRef = useRef(null);
 
   const openMedia = (movie) => {
     const path = buildMediaDetailPath(movie);
     if (path) navigate(path);
+  };
+
+  const scrollCarousel = (direction) => {
+    const track = continueWatchingRef.current;
+    if (!track) return;
+    const reduceMotion =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    track.scrollBy({
+      left: direction * track.clientWidth * 0.8,
+      behavior: reduceMotion ? "auto" : "smooth",
+    });
   };
 
   if (
@@ -41,6 +53,27 @@ const ContinueWatchingSection = ({ token }) => {
             </span>
           )}
         </div>
+        {continueWatchingItems.length > 1 && (
+          <div
+            className="trending-controls just-added-controls"
+            aria-label="Continue watching carousel controls"
+          >
+            <button
+              type="button"
+              aria-label="Previous title"
+              onClick={() => scrollCarousel(-1)}
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              aria-label="Next title"
+              onClick={() => scrollCarousel(1)}
+            >
+              ›
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="continue-watching-content">
@@ -57,7 +90,13 @@ const ContinueWatchingSection = ({ token }) => {
         </div>
       )}
       {continueWatchingItems.length > 0 && (
-        <div className="continue-row" aria-label="Continue watching titles">
+        <div
+          className="continue-row"
+          ref={continueWatchingRef}
+          role="region"
+          aria-roledescription="carousel"
+          aria-label="Continue watching titles"
+        >
           {continueWatchingItems.map((movie, index) => {
             const timeLeft = getTimeLeft(movie);
             const progressPercent = getProgressPercent(movie);
@@ -69,41 +108,40 @@ const ContinueWatchingSection = ({ token }) => {
                 onClick={() => openMedia(movie)}
                 disabled={!movie.id}
               >
-                <div className="continue-card-media-body">
-                  {movie.poster && (
-                    <img src={movie.poster} alt={movie.title} loading="lazy" />
-                  )}
-                  <span className="continue-card-body">
-                    <span className="continue-card-head">
-                      <strong>{movie.title}</strong>
-                      {movie.episode && <span>{movie.episode}</span>}
-                    </span>
-                    {progressPercent != null && (
-                      <span
-                        className="progress-track"
-                        role="progressbar"
-                        aria-label={`${movie.title} progress`}
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                        aria-valuenow={progressPercent}
-                      >
-                        <span
-                          style={{
-                            width: `${progressPercent}%`,
-                          }}
-                        />
-                      </span>
-                    )}
-                    <span className="continue-meta-row">
-                      <span>
-                        {timeLeft == null
-                          ? "Progress unavailable"
-                          : `${timeLeft} min left`}
-                      </span>
-                      <span>{getMetaLine(movie)}</span>
-                    </span>
+                {movie.poster && (
+                  <img src={movie.poster} alt="" loading="lazy" />
+                )}
+                <span className="continue-card-overlay" aria-hidden="true" />
+                <span className="continue-card-body">
+                  <span className="continue-card-head">
+                    <strong>{movie.title}</strong>
+                    {movie.episode && <span>{movie.episode}</span>}
                   </span>
-                </div>
+                  {progressPercent != null && (
+                    <span
+                      className="progress-track"
+                      role="progressbar"
+                      aria-label={`${movie.title} progress`}
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      aria-valuenow={progressPercent}
+                    >
+                      <span
+                        style={{
+                          width: `${progressPercent}%`,
+                        }}
+                      />
+                    </span>
+                  )}
+                  <span className="continue-meta-row">
+                    <span>
+                      {timeLeft == null
+                        ? "Progress unavailable"
+                        : `${timeLeft} min left`}
+                    </span>
+                    <span>{getMetaLine(movie)}</span>
+                  </span>
+                </span>
               </button>
             );
           })}

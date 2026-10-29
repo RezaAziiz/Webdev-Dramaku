@@ -225,16 +225,6 @@
     flex-basis: 52%;
   }
 
-  .continue-row {
-    grid-auto-columns: calc((100% - 36px) / 4);
-    overflow-x: visible;
-  }
-
-  .continue-card {
-    scroll-snap-align: unset;
-    aspect-ratio: 16 / 9;
-  }
-
   .genre-track {
     grid-auto-columns: 270px;
   }
