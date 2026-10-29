@@ -71,7 +71,7 @@
   }
 
   .trending-card {
-    flex-basis: 60%;
+    flex-basis: min(46%, 560px);
     aspect-ratio: 16 / 9;
   }
 
@@ -86,12 +86,16 @@
   }
 
   .just-added-card {
-    flex-basis: 56%;
+    flex-basis: min(46%, 560px);
     aspect-ratio: 16 / 9;
   }
 
   .genre-view-all-card {
     min-width: 320px;
+  }
+
+  .continue-row {
+    grid-auto-columns: calc((100% - 24px) / 3);
   }
 
   .hero-reel {
@@ -218,11 +222,11 @@
 
 @media (min-width: 1024px) {
   .anime-row {
-    grid-auto-columns: calc((100% - 48px) / 5);
+    grid-auto-columns: calc((100% - 60px) / 6);
   }
 
   .trending-card {
-    flex-basis: 52%;
+    flex-basis: min(26%, 400px);
   }
 
   .genre-track {
@@ -234,8 +238,8 @@
   }
 
   .genre-results-track {
-    gap: 24px;
-    grid-auto-columns: minmax(360px, 440px);
+    gap: 20px;
+    grid-auto-columns: minmax(300px, 380px);
   }
 
   .genre-result-card,
@@ -247,7 +251,7 @@
   }
 
   .genre-view-all-card {
-    min-width: 360px;
+    min-width: 300px;
   }
 
   .hero-shell {
@@ -263,8 +267,12 @@
   }
 
   .just-added-card {
-    flex-basis: 34%;
+    flex: 0 0 clamp(300px, 23vw, 400px);
     aspect-ratio: 16 / 9;
+  }
+
+  .continue-row {
+    grid-auto-columns: calc((100% - 48px) / 5);
   }
 
   .hero-content {
