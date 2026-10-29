@@ -99,7 +99,7 @@ export default function Register() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(apiUrl("/register"), {
+      const response = await fetch(apiUrl("/api/register"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -150,7 +150,7 @@ export default function Register() {
     setError("");
     setIsSubmitting(true);
     try {
-      const response = await axios.post(apiUrl("/google-login"), {
+      const response = await axios.post(apiUrl("/api/google-login"), {
         token: credentialResponse.credential,
       });
       if (!login(response.data.token)) {

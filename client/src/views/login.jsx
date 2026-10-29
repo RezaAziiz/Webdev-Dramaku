@@ -36,7 +36,7 @@ export default function Login() {
     }
 
     try {
-      const response = await axios.post(apiUrl("/login"), {
+      const response = await axios.post(apiUrl("/api/login"), {
         username,
         password,
       });
@@ -68,7 +68,7 @@ export default function Login() {
     }
 
     try {
-      const response = await axios.post(apiUrl("/google-login"), {
+      const response = await axios.post(apiUrl("/api/google-login"), {
         token: credentialResponse.credential,
       });
       if (!login(response.data.token)) {
