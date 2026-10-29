@@ -5,6 +5,7 @@ import { buildPlayerSrc, getTitle } from "../lib/detail";
 import { tmdbImageUrl } from "../lib/media";
 import DetailPlayer from "../components/detail/DetailPlayer";
 import SelectMenu from "../components/ui/SelectMenu";
+import { useWatchHistorySync } from "../hooks/useWatchHistorySync";
 
 const Watch = () => {
   const { id, mediaType } = useParams();
@@ -102,6 +103,13 @@ const Watch = () => {
       current = false;
     };
   }, [id, isTv, movie, selectedSeason]);
+
+  useWatchHistorySync({
+    tmdbId: id,
+    mediaType,
+    season: isTv ? selectedSeason : undefined,
+    episode: isTv ? selectedEpisode : undefined,
+  });
 
   const playerSrc = movie
     ? buildPlayerSrc({

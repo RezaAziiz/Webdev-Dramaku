@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../styles/detail.css";
 import { useAuth } from "../contexts/AuthContext";
@@ -11,7 +11,6 @@ import {
   tmdbImageUrl,
 } from "../lib/media";
 import {
-  TIMEUPDATE_SAVE_INTERVAL_MS,
   buildDetailFacts,
   getRuntimeLabel,
   getStudio,
@@ -53,7 +52,6 @@ const MovieDetail = () => {
   const navigate = useNavigate();
 
   const isTv = mediaType === "tv";
-  const lastProgressSaveRef = useRef(0);
 
   // Title details (raw TMDB passthrough: credits, videos, recommendations).
   useEffect(() => {
@@ -200,58 +198,7 @@ const MovieDetail = () => {
   }, [isLoggedIn, token, id, mediaType]);
 
   // Sync playback progress from the vidrock player back to our watch history.
-  useEffect(() => {
-    if (!isLoggedIn || !token || !id || !mediaType) return undefined;
-
-    const handleMessage = (event) => {
-      if (event.origin !== "https://vidrock.net") return;
-      if (event.data?.type !== "PLAYER_EVENT") return;
-
-      const payload = event.data.data || event.data;
-      const playerEvent = payload?.event;
-      const currentTime = payload?.currentTime;
-      const duration = payload?.duration;
-
-      if (typeof currentTime !== "number" || typeof duration !== "number") {
-        return;
-      }
-
-      const saveProgress = () => {
-        watchHistoryService
-          .saveProgress(
-            {
-              tmdbId: Number(id),
-              mediaType,
-              season: isTv ? selectedSeason : undefined,
-              episode: isTv ? selectedEpisode : undefined,
-              watchedSeconds: currentTime,
-              durationSeconds: duration,
-            },
-            token,
-          )
-          .catch((error) =>
-            console.error("Error saving watch progress:", error),
-          );
-      };
-
-      if (
-        playerEvent === "pause" ||
-        playerEvent === "seeked" ||
-        playerEvent === "ended"
-      ) {
-        saveProgress();
-      } else if (playerEvent === "timeupdate") {
-        const now = Date.now();
-        if (now - lastProgressSaveRef.current >= TIMEUPDATE_SAVE_INTERVAL_MS) {
-          lastProgressSaveRef.current = now;
-          saveProgress();
-        }
-      }
-    };
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [isLoggedIn, token, id, mediaType, isTv, selectedSeason, selectedEpisode]);
+  // Done in watch.jsx (which hosts the vidrock iframe) via useWatchHistorySync.
 
   if (detailsLoading) {
     return (

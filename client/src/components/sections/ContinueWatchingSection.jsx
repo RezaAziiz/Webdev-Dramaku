@@ -2,14 +2,16 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { buildMediaDetailPath } from "../../lib/media";
 import { useContinueWatchingFeed } from "../../hooks/useContinueWatchingFeed";
-import { getTimeLeft, getMetaLine } from "../../lib/format";
+import {
+  getProgressPercent,
+  getTimeLeft,
+  getMetaLine,
+} from "../../lib/format";
 
 const ContinueWatchingSection = ({ token }) => {
   const navigate = useNavigate();
   const { items: continueWatchingItems, loading: continueWatchingLoading, error: continueWatchingError, retry: retryContinueWatching } =
     useContinueWatchingFeed(token);
-
-  const getTimeLeftLocal = (movie) => getTimeLeft(movie);
 
   const openMedia = (movie) => {
     const path = buildMediaDetailPath(movie);
@@ -57,7 +59,8 @@ const ContinueWatchingSection = ({ token }) => {
       {continueWatchingItems.length > 0 && (
         <div className="continue-row" aria-label="Continue watching titles">
           {continueWatchingItems.map((movie, index) => {
-            const timeLeft = getTimeLeftLocal(movie);
+            const timeLeft = getTimeLeft(movie);
+            const progressPercent = getProgressPercent(movie);
             return (
               <button
                 type="button"
@@ -75,24 +78,18 @@ const ContinueWatchingSection = ({ token }) => {
                       <strong>{movie.title}</strong>
                       {movie.episode && <span>{movie.episode}</span>}
                     </span>
-                    {movie.progress != null && (
+                    {progressPercent != null && (
                       <span
                         className="progress-track"
                         role="progressbar"
                         aria-label={`${movie.title} progress`}
                         aria-valuemin="0"
                         aria-valuemax="100"
-                        aria-valuenow={Math.min(
-                          100,
-                          Math.max(0, Number(movie.progress)),
-                        )}
+                        aria-valuenow={progressPercent}
                       >
                         <span
                           style={{
-                            width: `${Math.min(
-                              100,
-                              Math.max(0, Number(movie.progress)),
-                            )}%`,
+                            width: `${progressPercent}%`,
                           }}
                         />
                       </span>

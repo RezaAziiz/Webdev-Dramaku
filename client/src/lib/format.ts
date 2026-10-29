@@ -15,12 +15,24 @@ export const getMetaLine = (movie: MediaMetadata): string =>
     .filter(Boolean)
     .join(" · ");
 
+export const getProgressPercent = (movie: MediaMetadata): number | null => {
+  if (movie.progress == null || movie.duration == null) return null;
+  const progress = Number(movie.progress);
+  const duration = Number(movie.duration);
+  if (!Number.isFinite(progress) || !Number.isFinite(duration) || duration <= 0) {
+    return null;
+  }
+  return Math.min(100, Math.max(0, Math.round((progress / duration) * 100)));
+};
+
 export const getTimeLeft = (movie: MediaMetadata): number | null => {
   if (movie.progress == null || movie.duration == null) return null;
-  return Math.max(
-    0,
-    Math.round((Number(movie.duration) * (100 - Number(movie.progress))) / 100),
-  );
+  const progress = Number(movie.progress);
+  const duration = Number(movie.duration);
+  if (!Number.isFinite(progress) || !Number.isFinite(duration) || duration <= 0) {
+    return null;
+  }
+  return Math.max(0, Math.round((duration - progress) / 60));
 };
 
 type HeroMetadata = MediaMetadata & {
